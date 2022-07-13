@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hk_so_rahf_paperformat_a4" model="report.paperformat">
+        <field name="name">Rahunok Faktura SO A4</field>
+        <field name="default" eval="True"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="hk_so_rahf_sale_order_report" model="ir.actions.report">
+        <field name="name">Rahunok Faktura SO</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hk_personal_signature.hk_so_rahf_container_inherit</field>
+        <field name="report_file">hk_personal_signature.hk_so_rahf_container_inherit</field>
+        <field name="print_report_name">(object.state in ('draft', 'sent') and 'Rahunok Faktura - %s' % (object.name)) or 'Rahunok Faktura - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="hk_personal_signature.hk_so_rahf_paperformat_a4"/>
+    </record>
+
+
+    <record id="hk_invoice_rahf_paperformat_a4" model="report.paperformat">
+        <field name="name">Rahunok Faktura Invoice A4</field>
+        <field name="default" eval="True"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="hk_invoice_rahf_account_move_report" model="ir.actions.report">
+        <field name="name">Rahunok Faktura Invoice stamp</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hk_personal_signature.hk_invoice_rahf_container_inherit</field>
+        <field name="report_file">hk_personal_signature.hk_invoice_rahf_container_inherit</field>
+        <field name="print_report_name">(object.state in ('draft', 'sent') and 'Rahunok Faktura - %s' % (object.name))
+            or 'Rahunok Faktura - %s' % (object.name)
+        </field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="hk_personal_signature.hk_invoice_rahf_paperformat_a4"/>
+    </record>
+
+    <template id="hk_invoice_rahf_template_inherit" inherit_id="kw_invoice_rahf.kw_invoice_rahf_template">
+        <xpath expr="//table[5]//tr//td//span" position="before">
+            <t t-if="doc.user_id.sign_image and doc.company_id.stamp_image">
+                <t t-if="print_with_stamp">
+                    <span style="position: relative; left: 0px; top: 0px;">
+
+                        <img style="max-height:1cm; max-width:4cm; position: relative; right: -20px; top: -10px;"
+                             t-att-src="'data:image/png;base64,%s' % to_text(doc.user_id.sign_image)"/>
+
+                        <img style="max-height:5cm; max-width:5cm; position: absolute; right: 0px; top: -10px;"
+                             t-att-src="'data:image/png;base64,%s' % to_text(doc.company_id.stamp_image)"/>
+
+                    </span>
+                </t>
+            </t>
+        </xpath>
+
+
+    </template>
+
+    <template id="hk_invoice_rahf_container_inherit" inherit_id="kw_invoice_rahf.kw_invoice_rahf_container"
+              primary="True">
+        <xpath expr="//t/t/t[@t-call='kw_invoice_rahf.kw_invoice_rahf_template']" position="before">
+            <t t-set="print_with_stamp" t-value="True"/>
+        </xpath>
+    </template>
+
+    <template id="hk_so_rahf_container_inherit" inherit_id="kw_so_rahf.kw_so_rahf_container" primary="True">
+        <xpath expr="//t/t/t[@t-call='kw_so_rahf.kw_so_rahf_template']" position="before">
+            <t t-set="print_with_stamp" t-value="True"/>
+        </xpath>
+    </template>
+
+
+    <template id="hk_invoice_vydn" inherit_id="kw_invoice_vydn.kw_invoice_vydn_template">
+        <xpath expr="//table[6]//tr//td//h5" position="after">
+            <t t-if="doc.user_id.sign_image and doc.company_id.stamp_image">
+                <span style="position: relative; left: 0px; top: 0px;">
+                    <img style="max-height:1cm; max-width:4cm; position: absolute; left: 0px; top: 20px; margin:0px; padding:0px;"
+                         t-att-src="'data:image/png;base64,%s' % to_text(doc.user_id.sign_image)"/>
+                    <t t-if="doc.company_id.partner_id">
+                        <img style="max-height:5cm; max-width:5cm; position: absolute; left: 20px; top: -10px;"
+                             t-att-src="'data:image/png;base64,%s' % to_text(doc.company_id.stamp_image)"/>
+                    </t>
+                </span>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="hk_so_vydn" inherit_id="kw_so_vydn.kw_so_vydn_template">
+        <xpath expr="//table[6]//tr//td//h5" position="after">
+            <t t-if="doc.user_id.sign_image and doc.company_id.stamp_image">
+                <span style="position: relative; left: 0px; top: 0px;">
+                    <img style="max-height:1cm; max-width:4cm; position: absolute; left: 10px; top: 0px;"
+                         t-att-src="'data:image/png;base64,%s' % to_text(doc.user_id.sign_image)"/>
+                    <img style="max-height:5cm; max-width:5cm; position: absolute; left: 0px; top: -10px;"
+                         t-att-src="'data:image/png;base64,%s' % to_text(doc.company_id.stamp_image)"/>
+                </span>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="hk_sale_fakt" inherit_id="kw_so_rahf.kw_so_rahf_template">
+        <xpath expr="//table[5]//tr//td" position="inside">
+            <t t-if="doc.user_id.sign_image and doc.company_id.stamp_image">
+                <t t-if="print_with_stamp">
+                    <span>
+                        <img style="max-height:1cm; max-width:4cm; position: relative; left: 0px; top: -150px;"
+                             t-att-src="'data:image/png;base64,%s' % to_text(doc.user_id.sign_image)"/>
+                    </span>
+                    <span>
+                        <img style="max-height:5cm; max-width:5cm; position: relative; left: 0px; top: -100px;"
+                             t-att-src="'data:image/png;base64,%s' % to_text(doc.company_id.stamp_image)"/>
+                    </span>
+                </t>
+            </t>
+        </xpath>
+    </template>
+
+
+</odoo>
