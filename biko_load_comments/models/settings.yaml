@@ -1,0 +1,4 @@
+B24_WEBHOOK: 'https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/'
+SOURCE_FILE: '/opt/odoo15_2/pjts/learn/repo/biko_load_comments/Deals.csv'
+RESULT_FILE: '/home/alexandr/BitrixDeals/work_dev_comments.json'
+CHARSET: 'UTF-8'

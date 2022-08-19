@@ -8,8 +8,15 @@
     "data": [
         'wizard/biko_import_recs_views.xml',
         'security/ir.model.access.csv',
-
     ],
+    'assets': {
+        'web.assets_qweb': [
+
+        ],
+        'web.assets_backend': [
+
+        ],
+    },
     'license': 'LGPL-3',
     'installable': True,
     'application': True,
