@@ -14,9 +14,9 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                    <field name="file" filename="file_name"/>
-                    <field name="file_name" invisible="1"/>
-                    <field name="charset"/>
+<!--                    <field name="file" filename="file_name"/>-->
+<!--                    <field name="file_name" invisible="1"/>-->
+<!--                    <field name="charset"/>-->
                 </sheet>
                 <footer>
                     <button type="object" name="action_import_records" class="btn btn-primary"

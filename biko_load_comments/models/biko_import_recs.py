@@ -4,25 +4,24 @@ import json
 from datetime import datetime
 import requests
 import csv
-import yaml
-import os
+# import yaml
+# import os
 
-B24_URI = ''
-RESULT_FILE = ''
-SOURCE_FILE = ''
-CHARSET = ''
+# B24_URI = ''
+# RESULT_FILE = ''
+# SOURCE_FILE = ''
+# CHARSET = ''
+#
+# relpath = os.path.dirname(os.path.realpath(__file__))
+# # get settings from YAML file
+# with open(relpath + '/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
+#     objects = yaml.load(yaml_file, yaml.Loader)
+#     B24_URI = objects['B24_WEBHOOK'] if objects['B24_WEBHOOK'][-1] != '/' else objects['B24_WEBHOOK'][0:-1]
+#     RESULT_FILE = objects['RESULT_FILE']
+#     SOURCE_FILE = objects['SOURCE_FILE']
+#     CHARSET = objects['CHARSET']
 
-relpath = os.path.dirname(os.path.realpath(__file__))
-# get settings from YAML file
-with open(relpath+'/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
-    objects = yaml.load(yaml_file, yaml.Loader)
-    B24_URI = objects['B24_WEBHOOK'] if objects['B24_WEBHOOK'][-1] != '/' else objects['B24_WEBHOOK'][0:-1]
-    RESULT_FILE = objects['RESULT_FILE']
-    SOURCE_FILE = objects['SOURCE_FILE']
-    CHARSET = objects['CHARSET']
-
-
-
+B24_URI = 'https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/'
 class ImportRecs(models.TransientModel):
     _name = 'biko.import.recs'
 
@@ -31,66 +30,96 @@ class ImportRecs(models.TransientModel):
     charset = fields.Selection(selection=[('UTF-8', 'UTF-8'), ('windows-1251', 'windows-1251')], string='Charset')
 
     def hello(self):
+        deals = dict()
         try:
-            with open(SOURCE_FILE, 'r', encoding=CHARSET) as file:
+        # ref = self.env['ir.model.data'].search([('name', '=', 'crm_lead_BXDeal_9382')])
+            ref = self.env['ir.model.data'].search([('name', 'like', 'crm_lead_BXDeal_%'),('model','=','crm.lead')])
 
-                deals = dict()
-                csv_reader = csv.reader(file, delimiter=';')
+            for r in ref:
+                ref_id = r.name.split('crm_lead_BXDeal_')[1]
+                rname = r.name
+                rmodule = r.module
+                deals.update({ref_id: {'id': ref_id, 'external_id': rmodule+'.'+rname, 'comments': dict()}})
 
-                firstline = True
+            return deals
 
-                for line in csv_reader:
-
-                    if firstline:
-                        firstline = False
-                        continue
-
-                    deals.update({line[0]: {'id': line[0], 'external_id': line[1], 'comments': dict()}})
-
-                return deals
-
-        except csv.Error as err:
-            print(f'Error reading CSV file: {err}')
+        except:
+            print('Error dict deals')
             return dict()
-        except UnicodeDecodeError as err:
-            print(f'Error reading CSV file: {err}')
-            return dict()
-        except IOError as err:
-            print('Error working with file ' + SOURCE_FILE)
-            print(err)
 
-    def get_deals(self):
 
-        try:
-            with open(SOURCE_FILE, 'r', encoding=CHARSET) as file:
+        # >> > ref.res_id
+        # 50
+        # >> > ref_id = ref.res_id
+        # >> > ref_id
+        # 50
+        # >> > self.env['crm.lead'].search([('id', '=', '27')])
+        # crm.lead(27, )
+        # >> > self.env['crm.lead'].search([('id', '=', ref_id)])
+        # crm.lead(50, )
+        # >> > lead = self.env['crm.lead'].search([('id', '=', ref_id)])
 
-                deals = dict()
-                csv_reader = csv.reader(file, delimiter=';')
+        #     with open(SOURCE_FILE, 'r', encoding=CHARSET) as file:
+        #
+        #         # deals = dict()
+        #         csv_reader = csv.reader(file, delimiter=';')
+        #
+        #         firstline = True
+        #
+        #         for line in csv_reader:
+        #
+        #             if firstline:
+        #                 firstline = False
+        #                 continue
+        #
+        #             deals.update({line[0]: {'id': line[0], 'external_id': line[1], 'comments': dict()}})
+        #
+        #     return deals
+        #
+        # except csv.Error as err:
+        #     print(f'Error reading CSV file: {err}')
+        #     return dict()
+        #
+        # except UnicodeDecodeError as err:
+        #     print(f'Error reading CSV file: {err}')
+        #     return dict()
+        #
+        # except IOError as err:
+        #     print('Error working with file ' + SOURCE_FILE)
+        #     print(err)
 
-                firstline = True
 
-                for line in csv_reader:
+    # def get_deals(self):
+    #     try:
+    #         with open(SOURCE_FILE, 'r', encoding=CHARSET) as file:
+    #
+    #             deals = dict()
+    #             csv_reader = csv.reader(file, delimiter=';')
+    #
+    #             firstline = True
+    #
+    #             for line in csv_reader:
+    #
+    #                 if firstline:
+    #                     firstline = False
+    #                     continue
+    #
+    #                 deals.update({line[0]: {'id': line[0], 'external_id': line[1], 'comments': dict()}})
+    #
+    #             return deals
+    #
+    #     except csv.Error as err:
+    #         print(f'Error reading CSV file: {err}')
+    #         return dict()
+    #     except UnicodeDecodeError as err:
+    #         print(f'Error reading CSV file: {err}')
+    #         return dict()
+    #     except IOError as err:
+    #         print('Error working with file ' + SOURCE_FILE)
+    #         print(err)
 
-                    if firstline:
-                        firstline = False
-                        continue
-
-                    deals.update({line[0]: {'id': line[0], 'external_id': line[1], 'comments': dict()}})
-
-                return deals
-
-        except csv.Error as err:
-            print(f'Error reading CSV file: {err}')
-            return dict()
-        except UnicodeDecodeError as err:
-            print(f'Error reading CSV file: {err}')
-            return dict()
-        except IOError as err:
-            print('Error working with file ' + SOURCE_FILE)
-            print(err)
 
     def get_comments(self, deals):
-
         deals_with_files = {}
 
         templ_start = '{"halt":0,"cmd": {'
@@ -135,6 +164,7 @@ class ImportRecs(models.TransientModel):
 
         return [deals, deals_with_files]
 
+
     def action_import_records(self):
         # deals = self.get_deals()
         deals = self.hello()
@@ -178,7 +208,7 @@ class ImportRecs(models.TransientModel):
                         for c_file in comment['FILES'].values():
                             f_name = c_file['name']
                             req = requests.get(c_file['urlDownload'])
-                            f_attachments.append((f_name, req.content))
+                            # f_attachments.append((f_name, req.content))
                     message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
                     message_rec['date'] = date_time
 
