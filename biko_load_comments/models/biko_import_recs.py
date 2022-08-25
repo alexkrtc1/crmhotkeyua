@@ -39,7 +39,7 @@ class ImportRecs(models.TransientModel):
                 ref_id = r.name.split('crm_lead_BXDeal_')[1]
                 rname = r.name
                 rmodule = r.module
-                deals.update({ref_id: {'id': ref_id, 'external_id': rmodule+'.'+rname, 'comments': dict()}})
+                deals.update({ref_id: {'id': ref_id, 'external_id': rmodule+'.'+rname, 'comments': dict(), 'DOWNLOAD_URL':''}})
 
             return deals
 
@@ -162,6 +162,27 @@ class ImportRecs(models.TransientModel):
                             for file in comment_line['FILES'].keys():
                                 deals_with_files.update({file: {'deal_id': deal_id, 'comment_id': comment_line['ID']}})
 
+                                file_id = {'id': file}
+                                req_file = requests.post(f'{B24_URI}/disk.file.get', json=file_id)
+
+                                if req_file.status_code != 200:
+                                    print('Error accessing to file B24!')
+                                    continue
+
+                                resp_file_json = req_file.json()
+                                # res_errors = resp_file_json['result']['result_error']
+                                res_file = resp_file_json['result']
+
+                                if len(res_file) > 0:
+                                    deal['comments'][comment_line['ID']]['FILES'][file]['urlDownload'] = ''
+                                    deal['comments'][comment_line['ID']]['FILES'][file]['urlDownload'] = res_file['DOWNLOAD_URL'];
+
+                                    # for c in deal['comments'].values():
+                                    #     if 'FILES' in c.keys():
+                                    #         for f in c['FILES']:
+                                    #             DOWNLOAD_URL = f['urlDownload'];
+
+
         return [deals, deals_with_files]
 
 
@@ -208,7 +229,8 @@ class ImportRecs(models.TransientModel):
                         for c_file in comment['FILES'].values():
                             f_name = c_file['name']
                             req = requests.get(c_file['urlDownload'])
-                            # f_attachments.append((f_name, req.content))
+                            # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
+                            f_attachments.append((f_name, req.content))
                     message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
                     message_rec['date'] = date_time
 
