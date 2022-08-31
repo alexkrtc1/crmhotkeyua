@@ -3,6 +3,8 @@ import base64
 import json
 from datetime import datetime
 import requests
+from requests.structures import CaseInsensitiveDict
+from datetime import timedelta
 import csv
 # import yaml
 # import os
@@ -22,6 +24,9 @@ import csv
 #     CHARSET = objects['CHARSET']
 
 B24_URI = 'https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/'
+headers = CaseInsensitiveDict()
+headers["Content-Type"] = "application/json"
+
 class ImportRecs(models.TransientModel):
     _name = 'biko.import.recs'
 
@@ -39,7 +44,7 @@ class ImportRecs(models.TransientModel):
                 ref_id = r.name.split('crm_lead_BXDeal_')[1]
                 rname = r.name
                 rmodule = r.module
-                deals.update({ref_id: {'id': ref_id, 'external_id': rmodule+'.'+rname, 'comments': dict(), 'DOWNLOAD_URL':''}})
+                deals.update({ref_id: {'id': ref_id, 'external_id': rmodule+'.'+rname, 'comments': dict(), 'activities': dict()}})
 
             return deals
 
@@ -186,6 +191,49 @@ class ImportRecs(models.TransientModel):
         return [deals, deals_with_files]
 
 
+    def get_activities(self,deals):
+
+        for deal in deals.values():
+
+            data_id = f'{{"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": {deal["id"]} }}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+            json_res = json.dumps(json.loads(data_id))
+            req = requests.post(f'{B24_URI}crm.activity.list', headers=headers, data=json_res)
+            # req = requests.post(f'{B24_URI}crm.activity.list', data=json_res)
+
+            if req.status_code != 200:
+                print('Error accessing to B24!')
+                continue
+            #
+            resp_json = req.json()
+            res_activity = resp_json['result']
+            #
+            if len(res_activity) > 0:
+                for activity in res_activity:
+                    deal = deals[activity['OWNER_ID']]
+                    deal['activities'].update({activity['ID']: activity})
+        return deals
+
+
+    def get_username_activities(self,id):
+            bitrix_user = {'lastname':''}
+            data_id = f'{{"ID":{id}}}'
+            json_res = json.dumps(json.loads(data_id))
+            req = requests.post(f'{B24_URI}user.search', headers=headers, data=json_res)
+
+            if req.status_code != 200:
+                print('Error accessing to B24!')
+
+
+            resp_json = req.json()
+            res_users = resp_json['result']
+
+            if len(res_users) > 0:
+                for user in res_users:
+                    bitrix_user['lastname'] = user['LAST_NAME']
+
+            return bitrix_user
+
+
     def action_import_records(self):
         # deals = self.get_deals()
         deals = self.hello()
@@ -194,6 +242,7 @@ class ImportRecs(models.TransientModel):
             return
 
         deals_res, deals_with_files = self.get_comments(deals)
+        deals_res = self.get_activities(deals_res)
 
         # for i_id, i_comments in deals_res.items():
         #     if i_comments['comments']:
@@ -201,18 +250,13 @@ class ImportRecs(models.TransientModel):
         #              if c_comments['COMMENT']=="":
         #                 print('empty')
 
-        # data = base64.b64decode(self.file)
-        # data = data.decode(self.charset)
-        # jsdata = json.loads(data)
 
         env_deals = self.env['crm.lead'].env
 
         for deal in deals_res.values():
 
             comments_list = deal['comments']
-            # self.env.ref
-            if not comments_list:
-                continue
+            activity_list = deal['activities']
 
             external_id = deal['external_id']
             id = deal['id']
@@ -221,18 +265,42 @@ class ImportRecs(models.TransientModel):
             record = env_deals.ref(external_id)
             #
             if record:
-                for comment in comments_list.values():
-                    date_time = datetime.fromisoformat(comment['CREATED']).replace(tzinfo=None)
-                    msg = comment['COMMENT']
-                    f_attachments = []
-                    if ('FILES' in comment.keys()):
-                        for c_file in comment['FILES'].values():
-                            f_name = c_file['name']
-                            req = requests.get(c_file['urlDownload'])
-                            # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
-                            f_attachments.append((f_name, req.content))
-                    message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
-                    message_rec['date'] = date_time
+                if comments_list:
+                    for comment in comments_list.values():
+                        date_time = datetime.fromisoformat(comment['CREATED']).replace(tzinfo=None)
+                        msg = comment['COMMENT']
+                        f_attachments = []
+                        if ('FILES' in comment.keys()):
+                            for c_file in comment['FILES'].values():
+                                f_name = c_file['name']
+                                req = requests.get(c_file['urlDownload'])
+                                # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
+                                f_attachments.append((f_name, req.content))
+                        message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
+                        message_rec['date'] = date_time
+
+                if activity_list:
+                    for activity in activity_list.values():
+                        author_id = activity['AUTHOR_ID']
+                        dict_user = self.get_username_activities(author_id)
+                        user_id = self.env['res.users'].search([('name', 'like', dict_user['lastname'])]).id
+                        if not user_id:
+                            user_id = self.env.uid
+
+                        date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
+                        # date_deadline = fields.Datetime.now()+timedelta(days=1)
+                        # date_deadline = fields.Date.context_today(self)
+                        note = activity['SUBJECT']
+
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            activity_typ = 'mail.mail_activity_data_call'
+                        else:
+                            activity_typ = None
+
+
+                        act_env = record.activity_schedule(activity_typ,user_id=user_id,date_deadline=date_deadline,summary=note, note=note)
+                        # act_env.action_feedback(feedback='ok')
+
 
         # data = base64.b64decode(self.file)
         # data = data.decode(self.charset)
