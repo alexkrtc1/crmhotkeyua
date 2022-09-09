@@ -103,7 +103,7 @@ probe/
 media/
 probe/
 biko_load_comments/*.csv
-*.xlsx
+biko_load_comments/*.xlsx
 *.yaml
-*.json
-*.txt
+biko_load_comments/*.json
+biko_load_comments/*.txt
