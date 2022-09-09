@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': "BIKO: Import comments to opportunities",
-    'version': '15.0.1.1.1',
-    'author': 'Borovlev AS',
-    'company': 'BIKO',
+    'version': '15.0.1.1.2',
+    'author': 'Borovlev AS and Hotkey',
+    'company': 'BIKO,HOTKEY',
     "depends": ['crm'],
     "data": [
         'wizard/biko_import_recs_views.xml',

@@ -27,4 +27,30 @@
         </field>
     </record>
 
+<!--    <record model="ir.ui.view" id="biko.crm.crm_lead_view_list_activities_form_view">-->
+<!--            <field name="name">biko.crm.crm_lead_view_list_activities</field>-->
+<!--            <field name="model">crm.lead</field>-->
+<!--            <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>-->
+<!--            <field name="arch" type="xml">-->
+<!--&lt;!&ndash;                <xpath expr="//tree" position="inside">&ndash;&gt;-->
+<!--&lt;!&ndash;                    <button name="action_import_records" class="text-warning" type="object" string="Import comments"/>&ndash;&gt;-->
+<!--&lt;!&ndash;                </xpath>&ndash;&gt;-->
+<!--            </field>-->
+<!--    </record>-->
+
+        <record id="biko_crm_lead_view_tree" model="ir.ui.view">
+            <field name="name">biko.crm.crm_lead_view_list_activities</field>
+            <field name="model">crm.lead</field>
+            <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+            <field name="arch" type="xml">
+                <xpath expr="//header" position="inside">
+                    <button name="action_import_records" class="btn btn-primary" type="object" string="Import comments"/>
+                    <button name="action_import_activities" class="btn btn-primary" type="object" string="Import activities"/>
+                </xpath>
+
+
+            </field>
+        </record>
+
+
 </odoo>
