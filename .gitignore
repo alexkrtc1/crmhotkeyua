@@ -102,3 +102,8 @@ probe/
 *.orig
 media/
 probe/
+*.csv
+*.xlsx
+*.yaml
+*.json
+*.txt
