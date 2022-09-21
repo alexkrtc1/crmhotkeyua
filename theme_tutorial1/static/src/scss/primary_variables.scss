@@ -1,0 +1,94 @@
+$o-theme-color-palettes: map-merge($o-theme-color-palettes,
+    (
+       'avantgarde-1': (
+            'alpha': #E91E63,
+            'beta': #FF9833,
+            'gamma': #339ACC,
+            'delta': #00CC64,
+            'epsilon': #572F59,
+
+            'success': #5CB85C,
+            'info': #4D68A3,
+            'warning': #DDC66B,
+            'danger': #D86060,
+        ),
+        'avantgarde-2':(
+            'alpha': #DBAD10,
+            'beta': #595959,
+            'gamma': #808F85,
+            'delta': #91C499,
+            'epsilon': #F2E9DC,
+        ),
+        'avantgarde-3':(
+            'alpha': #3BBFEE,
+            'beta': #58355E,
+            'gamma': #E03616,
+            'delta': #FFF689,
+            'epsilon': #CFFFB0,
+
+            'success': #31B05E,
+            'info': #4D68A3,
+            'warning': #EACF41,
+            'danger': #CB3E3E,
+        ),
+        'avantgarde-4':(
+            'alpha': #009688,
+            'beta': #003249,
+            'gamma': #313715,
+            'delta': #ECCE8E,
+            'epsilon': #D16014,
+
+            'success': #5CB85C,
+        ),
+        'avantgarde-5':(
+            'alpha': #F44336,
+            'beta': #450D0B,
+            'gamma': #1F143B,
+            'delta': #80A2BD,
+            'epsilon': #655557,
+
+            'success': #31B05E,
+            'info': #4D68A3,
+            'warning': #EACF41,
+            'danger': #CB3E3E,
+        ),
+    )
+);
+
+
+
+//------------------------------------------------------------------------------
+// Website customizations
+//------------------------------------------------------------------------------
+
+$o-website-values-palettes: (
+    (
+        'color-palettes-name': 'avantgarde-1',
+        'layout': 'full',
+
+        'font-size-base': 1rem,
+        'font': 'Syne',
+        'headings-font': 'Syne',
+        'navbar-font': 'Syne',
+        'buttons-font': 'Syne',
+
+        'header-template': 'hamburger',
+        'hamburger-type': 'default',
+        'hamburger-position': 'right',
+
+        'footer-template': 'descriptive',
+
+        'btn-primary-outline': true,
+        'link-underline': 'never',
+    ),
+);
+
+$o-selected-color-palettes-names: append($o-selected-color-palettes-names, 'avantgarde-1');
+
+$o-color-palettes-compatibility-indexes: (
+    1: 'avantgarde-1',
+    2: 'avantgarde-2',
+    3: 'avantgarde-3',
+    4: 'avantgarde-4',
+    5: 'avantgarde-5',
+);

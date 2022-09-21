@@ -1,0 +1,30 @@
+footer{
+    border-top: 5px solid theme-color('primary');
+}
+
+.navbar-light1 {
+    background-color: #cae4db;
+    color: #00303f;
+}
+
+.s_testimonial {
+    border: 1px solid #EAEAEA;
+    padding: 20px;
+
+    img{
+        width:100%;
+    }
+
+    &.shadow img {
+        box-shadow: 0 2px 5px rgba(51, 51, 51, 0.4);
+    }
+    &.grey_bg {
+        border: none;
+        background-color: #EAEAEA;
+    }
+    .list_item {
+        height:150px;
+        width:150px;
+    }
+
+}

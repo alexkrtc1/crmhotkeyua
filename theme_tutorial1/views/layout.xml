@@ -1,0 +1,13 @@
+
+<odoo>
+    <template id="custom_message" inherit_id="website.layout" name="Custom Header">
+<!--    Add html element after top menu before main-->
+    <xpath expr="//div[@id='wrapwrap']/main" position="before">
+        <div class="container">
+            <div class="alert alert-info mt16" role="alert">
+                <strong>Welcome</strong> in our website!
+            </div>
+        </div>
+    </xpath>
+</template>
+</odoo>
