@@ -545,15 +545,14 @@ class ImportComments(models.Model):
                         if res_user:
                             user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
                             if user_search:
-                                user_id = user_search.id
+                                user_id = user_search[0].id
                             else:
                                 user_id = self.env.uid
 
                         date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
                         # date_deadline = fields.Datetime.now()+timedelta(days=1)
-                        # date_deadline = fields.Date.context_today(self)
-                        note = activity['SUBJECT']
-
+                        date_today = fields.Date.context_today(self)
+                        note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
                         else:
