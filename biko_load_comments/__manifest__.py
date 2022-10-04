@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': "BIKO: Import comments to opportunities",
-    'version': '15.0.1.1.2',
+    'version': '1.1.3',
     'author': 'Borovlev AS and Hotkey',
     'company': 'BIKO,HOTKEY',
     "depends": ['crm'],

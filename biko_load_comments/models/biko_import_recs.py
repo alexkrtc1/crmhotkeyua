@@ -555,6 +555,10 @@ class ImportComments(models.Model):
                         note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            activity_typ = 'mail.mail_activity_data_email'
+                        elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+                            activity_typ = 'mail.mail_activity_data_todo'
                         else:
                             activity_typ = None
 
