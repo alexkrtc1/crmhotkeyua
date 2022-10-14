@@ -551,8 +551,10 @@ class ImportComments(models.Model):
 
                         date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
                         # date_deadline = fields.Datetime.now()+timedelta(days=1)
+                        create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
                         date_today = fields.Date.context_today(self)
-                        note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
+                        # note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
+                        note = activity['SUBJECT']
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
                         elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
@@ -564,5 +566,6 @@ class ImportComments(models.Model):
 
                         act_env = record.activity_schedule(activity_typ, user_id=user_id, date_deadline=date_deadline,
                                                            summary=note, note=note)
+                        act_env['create_date'] = create_date
                         if activity['COMPLETED'] == 'Y':
                             act_env.action_feedback(feedback='ok')
