@@ -568,4 +568,7 @@ class ImportComments(models.Model):
                                                            summary=note, note=note)
                         act_env['create_date'] = create_date
                         if activity['COMPLETED'] == 'Y':
-                            act_env.action_feedback(feedback='ok')
+                            message_id = act_env.action_feedback(feedback='bitrix24')
+
+                        curr_act = self.env['mail.message'].browse([message_id])
+                        curr_act.write({'date': create_date})
