@@ -451,9 +451,9 @@ class ImportComments(models.Model):
 
         env_deals = self.env['crm.lead'].env
         # for odoo15
-        odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
         # for odoo14
-        # odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
 
         for deal in deals_res.values():
 
@@ -512,11 +512,11 @@ class ImportComments(models.Model):
 
         env_deals = self.env['crm.lead'].env
         #  odoo15 _xmlid_to_res_id("base.partner_root")
-        odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
-        odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
+        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        # odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
         # odoo14
-        # odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
-        # odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
+        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+        odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
 
         for deal in deals_res.values():
             activity_list = deal['activities']
