@@ -428,29 +428,16 @@ class ImportComments(models.Model):
                     deal['activities'].update({activity['ID']: activity})
         return deals
 
-
     def get_username_activities(self):
-            bitrix_user = {'lastname' : ''}
-            # data_id = f'{{"ID":{id}}}'
-            # json_res = json.dumps(json.loads(data_id))
-            # req = requests.post(f'{B24_URI}/user.search', headers=headers, data=json_res)
-            # req = requests.post(f'{B24_URI}/user.get', headers=headers, data=json_res)
-            req = requests.post(f'{B24_URI}/user.get', headers=headers)
+        req = requests.post(f'{B24_URI}/user.get', headers=headers)
 
-            if req.status_code != 200:
-                print('Error accessing to B24!')
+        if req.status_code != 200:
+            print('Error accessing to B24!')
 
+        resp_json = req.json()
+        res_users = resp_json['result']
 
-            resp_json = req.json()
-            res_users = resp_json['result']
-
-            # if len(res_users) > 0:
-            #     res = next((user for user in res_users if user['ID']==id), False)
-            #     if res:
-            #         bitrix_user['lastname'] = res['LAST_NAME']
-
-
-            return res_users
+        return res_users
 
     def action_import_records(self):
         # deals = self.get_deals()
@@ -463,6 +450,9 @@ class ImportComments(models.Model):
         deals_res = self.get_activities(deals_res)
 
         env_deals = self.env['crm.lead'].env
+        # for odoo15
+        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
 
         for deal in deals_res.values():
 
@@ -477,6 +467,8 @@ class ImportComments(models.Model):
             #
             if record:
                 if comments_list:
+                    dict_users = self.get_username_activities()
+
                     for comment in comments_list.values():
                         date_time = datetime.fromisoformat(comment['CREATED']).replace(tzinfo=None)
                         msg = comment['COMMENT']
@@ -487,30 +479,22 @@ class ImportComments(models.Model):
                                 req = requests.get(c_file['urlDownload'])
                                 # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
                                 f_attachments.append((f_name, req.content))
-                        message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
+
+                        author_id = comment['AUTHOR_ID']
+                        if len(dict_users) > 0:
+                            res_user = next((user for user in dict_users if user['ID'] == author_id), False)
+
+                        if res_user:
+                            user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
+                            if user_search:
+                                user_id = user_search[0].partner_id.id
+                            else:
+                                user_id = odoobot_id
+
+                        message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment', attachments=f_attachments)
                         message_rec['date'] = date_time
 
-                # if activity_list:
-                #     for activity in activity_list.values():
-                #         author_id = activity['AUTHOR_ID']
-                #         dict_user = self.get_username_activities(author_id)
-                #         user_id = self.env['res.users'].search([('name', 'like', dict_user['lastname'])]).id
-                #         if not user_id:
-                #             user_id = self.env.uid
-                #
-                #         date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
-                #         # date_deadline = fields.Datetime.now()+timedelta(days=1)
-                #         # date_deadline = fields.Date.context_today(self)
-                #         note = activity['SUBJECT']
-                #
-                #         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
-                #             activity_typ = 'mail.mail_activity_data_call'
-                #         else:
-                #             activity_typ = None
-                #
-                #         act_env = record.activity_schedule(activity_typ, user_id=user_id, date_deadline=date_deadline,
-                #                                            summary=note, note=note)
-                #         # act_env.action_feedback(feedback='ok')
+
 
 
     def action_import_activities(self):
@@ -523,6 +507,12 @@ class ImportComments(models.Model):
         deals_res = self.get_activities(deals)
 
         env_deals = self.env['crm.lead'].env
+        #  odoo15 _xmlid_to_res_id("base.partner_root")
+        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        # odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
+        # odoo14
+        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+        odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
 
         for deal in deals_res.values():
             activity_list = deal['activities']
@@ -545,16 +535,28 @@ class ImportComments(models.Model):
                         if res_user:
                             user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
                             if user_search:
-                                user_id = user_search[0].id
+                                user_id = user_search[0].partner_id.id
+                                su_id = user_search[0].id
                             else:
-                                user_id = self.env.uid
+                                # user_id = self.env.uid
+                                user_id = odoobot_id
+                                su_id = odoobot_user_id
 
                         date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
-                        # date_deadline = fields.Datetime.now()+timedelta(days=1)
                         create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
+                        last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
+
+                        if activity['START_TIME']:
+                            start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
+
+                        deal_create_date = datetime.fromisoformat(str(record.create_date)).replace(tzinfo=None)
+
+                        create_date = create_date or last_update_date or start_time_date or deal_create_date
+
                         date_today = fields.Date.context_today(self)
                         # note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
                         note = activity['SUBJECT']
+
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
                         elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
@@ -564,11 +566,11 @@ class ImportComments(models.Model):
                         else:
                             activity_typ = None
 
-                        act_env = record.activity_schedule(activity_typ, user_id=user_id, date_deadline=date_deadline,
+                        act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
                                                            summary=note, note=note)
                         act_env['create_date'] = create_date
 
                         if activity['COMPLETED'] == 'Y':
                             message_id = act_env.action_feedback(feedback='bitrix24')
                             act_to_message = self.env['mail.message'].browse([message_id])
-                            act_to_message.write({'date': create_date})
+                            act_to_message.write({'date': create_date, 'author_id': user_id})
