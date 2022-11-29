@@ -451,8 +451,9 @@ class ImportComments(models.Model):
 
         env_deals = self.env['crm.lead'].env
         # for odoo15
-        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
-        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+        odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        # for odoo14
+        # odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
 
         for deal in deals_res.values():
 
@@ -483,6 +484,8 @@ class ImportComments(models.Model):
                         author_id = comment['AUTHOR_ID']
                         if len(dict_users) > 0:
                             res_user = next((user for user in dict_users if user['ID'] == author_id), False)
+                            res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user['LAST_NAME'] + "</p>"
+
 
                         if res_user:
                             user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
@@ -490,6 +493,7 @@ class ImportComments(models.Model):
                                 user_id = user_search[0].partner_id.id
                             else:
                                 user_id = odoobot_id
+                                msg += "<p>" + res_user_last_name + "</p>"
 
                         message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment', attachments=f_attachments)
                         message_rec['date'] = date_time
@@ -508,11 +512,11 @@ class ImportComments(models.Model):
 
         env_deals = self.env['crm.lead'].env
         #  odoo15 _xmlid_to_res_id("base.partner_root")
-        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
-        # odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
+        odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+        odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
         # odoo14
-        odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
-        odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
+        # odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+        # odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
 
         for deal in deals_res.values():
             activity_list = deal['activities']
@@ -526,17 +530,23 @@ class ImportComments(models.Model):
                     dict_users = self.get_username_activities()
                     for activity in activity_list.values():
                         author_id = activity['AUTHOR_ID']
+                        responsible_id = activity['RESPONSIBLE_ID']
+                        # responsible_id = self.env['res.users'].browse([activity['RESPONSIBLE_ID']])
 
+                        if len(dict_users) > 0:
+                            responsible_user = next((user for user in dict_users if user['ID']==responsible_id), False)
+                            responsible_user_lastname = "<p> Ответственный: " + responsible_user['NAME'] + "&nbsp;" + responsible_user['LAST_NAME'] +"</p>"
 
                         if len(dict_users) > 0:
                             res_user = next((user for user in dict_users if user['ID']==author_id), False)
-
+                            res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user['LAST_NAME']+"</p>"
 
                         if res_user:
                             user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
                             if user_search:
                                 user_id = user_search[0].partner_id.id
                                 su_id = user_search[0].id
+                                res_user_last_name = ''
                             else:
                                 # user_id = self.env.uid
                                 user_id = odoobot_id
@@ -555,7 +565,9 @@ class ImportComments(models.Model):
 
                         date_today = fields.Date.context_today(self)
                         # note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
-                        note = activity['SUBJECT']
+
+                        note = activity['SUBJECT'] + res_user_last_name
+                        summary = activity['SUBJECT']
 
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
@@ -567,8 +579,9 @@ class ImportComments(models.Model):
                             activity_typ = None
 
                         act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
-                                                           summary=note, note=note)
+                                                           summary=summary, note=note)
                         act_env['create_date'] = create_date
+                        act_env['create_uid'] = responsible_id
 
                         if activity['COMPLETED'] == 'Y':
                             message_id = act_env.action_feedback(feedback='bitrix24')
