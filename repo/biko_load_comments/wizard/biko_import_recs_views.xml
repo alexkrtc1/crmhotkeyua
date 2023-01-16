@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--    <record id="biko_import_recs_action" model="ir.actions.act_window">-->
+    <!--        <field name="name">Import comments</field>-->
+    <!--        <field name="res_model">biko.import.recs</field>-->
+    <!--        <field name="view_mode">form</field>-->
+    <!--        <field name="target">new</field>-->
+    <!--        <field name="binding_model_id" ref="crm.model_crm_lead"/>-->
+    <!--    </record>-->
+
+    <!--    <menuitem-->
+    <!--            id="menu_biko_load_comments_settings"-->
+    <!--            name="Settings Load Comments"-->
+    <!--            parent="crm.crm_menu_config"-->
+    <!--            sequence="1"-->
+    <!--            action="biko_import_recs_action"-->
+    <!--    />-->
+
+    <record id="ir_actions_server_biko_load_comments" model="ir.actions.server">
+        <field name="name">Import Messages Activities</field>
+        <field name="model_id" ref="biko_load_comments.model_crm_lead"/>
+        <field name="binding_model_id" ref="crm.model_crm_lead"/>
+        <field name="binding_type">action</field>
+        <field name="sequence">-3</field>
+        <field name="state">code</field>
+        <field name="code">model.action_import_activities_comments()</field>
+    </record>
+
+    <record id="biko_import_recs_view" model="ir.ui.view">
+        <field name="name">biko.import.recs.view</field>
+        <field name="model">biko.import.recs</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <!--                    <field name="file" filename="file_name"/>-->
+                    <!--                    <field name="file_name" invisible="1"/>-->
+                    <!--                    <field name="charset"/>-->
+                </sheet>
+                <footer>
+                    <button type="object" name="action_import_records" class="btn btn-primary"
+                            string="Import"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+
+    <record id="biko_crm_lead_view_tree" model="ir.ui.view">
+        <field name="name">biko.crm.crm_lead_view_list_activities</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree" position="inside">
+                <header>
+                    <button name="action_import_activities_comments" class="btn btn-primary" type="object"
+                            string="Import activities and comments"/>
+                    <button name="action_import_records" attrs="{'invisible':True}" class="btn btn-primary"   type="object"
+                            string="Import comments"
+                    />
+                    <button name="action_import_activities" attrs="{'invisible':True}" class="btn btn-primary" type="object"
+                            string="Import activities"
+                    />
+                    <!--attrs="{'invisible':True}"-->
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+
+</odoo>
