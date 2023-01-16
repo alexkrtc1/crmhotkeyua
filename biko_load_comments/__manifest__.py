@@ -8,7 +8,7 @@
     "data": [
         'wizard/biko_import_recs_views.xml',
         'security/ir.model.access.csv',
-        # 'views/assets.xml',
+        'views/assets.xml',
         'views/res_config_settings_views.xml'
 
     ],
