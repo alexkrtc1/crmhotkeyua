@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, _
 import base64
 import json
 from datetime import datetime
@@ -8,6 +8,11 @@ from datetime import timedelta
 import csv
 import yaml
 import os
+import re
+from odoo.exceptions import UserError
+from . import mail_tml
+import urllib.parse
+import logging
 
 B24_URI = ''
 # RESULT_FILE = ''
@@ -15,6 +20,7 @@ B24_URI = ''
 # CHARSET = ''
 
 relpath = os.path.dirname(os.path.realpath(__file__))
+hk_logger = logging.getLogger(__name__)
 
 with open(relpath + '/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
     objects = yaml.load(yaml_file, yaml.Loader)
@@ -405,7 +411,39 @@ class ImportComments(models.Model):
 
         return [deals, deals_with_files]
 
+    def post_from_url(self, url, param, pheaders=headers):
+        req = requests.post(url, param, headers=pheaders)
 
+        if req.status_code != 200:
+            print('Error accessing to B24!')
+
+        resp_json = req.json()
+        res = resp_json['result']
+        start = resp_json['next']
+        total = resp_json['total']
+        quant_url_items = int(total / start)
+        start_page = 0
+        templ_start = '{"halt":0,"cmd": {'
+        templ_end = '}}'
+        packages = []
+        param_str = ''
+        i = 1
+
+
+        param_dict = json.loads(param)
+        while 'next' in resp_json:
+            start_page += start
+            param_dict.update({"start": start_page})
+            param_str = json.dumps(param_dict, ensure_ascii=False)
+            req = requests.post(url, param_str, headers=pheaders)
+            resp_json = req.json()
+            res.extend(resp_json['result'])
+            i += 1
+
+        hk_logger.info("contacts loops%s", i)
+        return res
+
+        ######
     def get_activities(self,deals):
 
         for deal in deals.values():
@@ -498,23 +536,41 @@ class ImportComments(models.Model):
                         message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment', attachments=f_attachments)
                         message_rec['date'] = date_time
 
-
-
-
     def action_import_activities(self):
         deals = self.hello()
         if len(deals) == 0:
             print('Error while loading deals!')
             return
 
-
         deals_res = self.get_activities(deals)
 
+        data_contacts = '''
+                       { 
+                          "order": { "DATE_CREATE": "ASC" },
+                          "select": [ "ID","NAME","LAST_NAME","LEAD_ID","COMPANY_ID","EMAIL","PHONE","TYPE_ID"]
+                      }
+                  '''
+
+        contacts = False
+        if not contacts:
+            contacts = self.post_from_url(f'{B24_URI}/crm.contact.list', data_contacts)
+
+        data_company = '''
+                       { 
+                          "order": { "DATE_CREATE": "ASC" },
+                          "select": ["ID", "TITLE", "CURRENCY_ID", "REVENUE","PHONE","EMAIL","ADDRESS"]
+                      }
+                  '''
+        # "crm.company.list",
+        # {
+        #     order: {"DATE_CREATE": "ASC"},
+        #     filter: {"INDUSTRY": "MANUFACTURING", "COMPANY_TYPE": "CUSTOMER"},
+        #     select: ["ID", "TITLE", "CURRENCY_ID", "REVENUE"]
+        # },
+        # companies = self.post_from_url(f'{B24_URI}/crm.company.list', data_company)
+        companies = None
+
         env_deals = self.env['crm.lead'].env
-        #  odoo15 _xmlid_to_res_id("base.partner_root")
-        # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
-        # odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
-        # odoo14
         odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
         odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
 
@@ -528,21 +584,181 @@ class ImportComments(models.Model):
             if record:
                 if activity_list:
                     dict_users = self.get_username_activities()
-                    for activity in activity_list.values():
+
+                    sorted_date = sorted(list(activity_list.values()),
+                                         key=lambda x: (datetime.strptime(
+                                             str(datetime.fromisoformat(x['CREATED']).replace(tzinfo=None)),
+                                             '%Y-%m-%d %H:%M:%S')))
+
+                    # datetime.strptime(str(datetime.fromisoformat(list(activity_list.values())[1]['CREATED']).replace(tzinfo=None)),'%Y-%m-%d %H:%M:%S')
+
+                    # for activity in activity_list.values():
+                    for activity in sorted_date:
+                        date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
+                        date_deadline_str = date_deadline.strftime("%A,%d%b %Y,%H:%M")
+                        create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
+                        last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
+                        # message = locale_date_str + " тел:" + partner_phone + " Только что был пропущен звонок от" + partner_name + "<a href=# data-oe-model=crm.phonecall data-oe-id=%d>#%s - Ссылка на звонок</a>" % (record.id, record.name)
                         author_id = activity['AUTHOR_ID']
                         responsible_id = activity['RESPONSIBLE_ID']
-                        # responsible_id = self.env['res.users'].browse([activity['RESPONSIBLE_ID']])
+                        ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][0]['ENTITY_TYPE_ID'])
+                        ENTITY_ID = activity['COMMUNICATIONS'][0]['ENTITY_ID']
+                        # COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                        tel = activity['COMMUNICATIONS'][0]['VALUE']
+                        # partner_company = ''
+
+                        company_id = 0
+
+                        # if COMPANY_TITLE:
+                        #     company_search = self.env['res.partner'].search(
+                        #         [('name', 'like', COMPANY_TITLE)])
+                        #     if company_search:
+                        #         company_id = company_search[0].id or 0
 
                         if len(dict_users) > 0:
-                            responsible_user = next((user for user in dict_users if user['ID']==responsible_id), False)
-                            responsible_user_lastname = "<p> Ответственный: " + responsible_user['NAME'] + "&nbsp;" + responsible_user['LAST_NAME'] +"</p>"
+                            responsible_user = next((user for user in dict_users if user['ID'] == responsible_id),
+                                                    False)
+                            responsible_user_lastname = responsible_user['NAME'] + ' ' + responsible_user['LAST_NAME']
 
                         if len(dict_users) > 0:
-                            res_user = next((user for user in dict_users if user['ID']==author_id), False)
-                            res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user['LAST_NAME']+"</p>"
+                            res_user = next((user for user in dict_users if user['ID'] == author_id), False)
+                            res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user[
+                                'LAST_NAME'] + "</p>"
+
+                        # <a href=# data-oe-model=account.move data-oe-id={move_id}>{move_name}</a>"
+                        if (ENTITY_TYPE_ID == 4):
+                            COMPANY_ID = ENTITY_ID
+                            # company_id = 0
+                            if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
+                                COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+
+                            if COMPANY_TITLE:
+                                company_search = self.env['res.partner'].search(
+                                    [('name', 'like', COMPANY_TITLE)])
+                                if company_search:
+                                    company_id = company_search[0].id or 0
+                                    url_company = f'web#id={company_id}&model=res.partner'
+
+
+                            date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                            company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                                                                  company_id=company_id)
+                            responsible_user_fmt = self.responsible_user_tml.format(
+                                responsible_user_lastname=responsible_user_lastname)
+                            partner_company_fmt = self.partner_company.format(date_deadline_tml=date_deadline_fmt,
+                                                                              communication_name_tml='',
+                                                                              company_tml=company_fmt,
+                                                                              responsible_user_tml=responsible_user_fmt)
+
+
+                        elif (ENTITY_TYPE_ID == 3):
+                            partner_id = 0
+
+                            if len(contacts) > 0:
+                                contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID), False)
+                                contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact['LAST_NAME'] + "</p>"
+
+                            if contact:
+                                partner_search = self.env['res.partner'].search(
+                                    [('name', 'like', contact['LAST_NAME']), ('name', 'like', contact['NAME'])])
+                                if partner_search:
+                                    partner_id = partner_search[0].id or 0
+                                    url_partner = f'web#id={partner_id}&model=res.partner'
+
+                            if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
+                                COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['NAME'] + ' ' + \
+                                                      activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME']
+
+                                COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME']
+                                COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                                COMPANY_ID = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_ID']
+
+                                if COMPANY_TITLE:
+                                    company_search = self.env['res.partner'].search(
+                                        [('name', 'like', COMPANY_TITLE)])
+                                    if company_search:
+                                        company_id = company_search[0].id or 0
+                                        url_company = f'web#id={company_id}&model=res.partner'
+
+
+
+                                date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                                communication_name_fmt = self.communication_name_tml.format(
+                                    COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
+                                company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                                                                      company_id=company_id)
+                                responsible_user_fmt = self.responsible_user_tml.format(
+                                    responsible_user_lastname=responsible_user_lastname)
+                                partner_company_fmt = self.partner_company.format(date_deadline_tml=date_deadline_fmt,
+                                                                                  communication_name_tml=communication_name_fmt,
+                                                                                  company_tml=company_fmt,
+                                                                                  responsible_user_tml=responsible_user_fmt)
+
+                            else:
+
+                                date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                                responsible_user_fmt = self.responsible_user_tml.format(
+                                    responsible_user_lastname=responsible_user_lastname)
+                                partner_company_fmt = self.partner_company.format(date_deadline_tml=date_deadline_fmt,
+                                                                                  communication_name_tml='',
+                                                                                  company_tml='',
+                                                                                  responsible_user_tml=responsible_user_fmt)
+
+                        else:
+                            if len(activity['COMMUNICATIONS']) > 1:
+                                if (len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
+
+                                    COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                                                              'NAME'] + ' ' + \
+                                                          activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['LAST_NAME']
+
+                                    COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                                        'LAST_NAME']
+                                    COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                                    COMPANY_ID = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_ID']
+                                    ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][1]['ENTITY_TYPE_ID'])
+                                    ENTITY_ID = activity['COMMUNICATIONS'][1]['ENTITY_ID']
+                                    COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                                    tel = activity['COMMUNICATIONS'][1]['VALUE']
+                                    partner_company = ''
+                                    company_id = 0
+
+                                    if COMPANY_TITLE:
+                                        company_search = self.env['res.partner'].search(
+                                            [('name', 'like', COMPANY_TITLE)])
+                                        if company_search:
+                                            company_id = company_search[0].id or 0
+
+                                # elif (ENTITY_TYPE_ID == 3):
+                                partner_id = 0
+
+                                if len(contacts) > 0:
+                                    contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
+                                                   False)
+                                    contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact[
+                                        'LAST_NAME'] + "</p>"
+
+                                if contact:
+                                    partner_search = self.env['res.partner'].search(
+                                        [('name', 'like', contact['LAST_NAME']), ('name', 'like', contact['NAME'])])
+                                    if partner_search:
+                                        partner_id = partner_search[0].id or 0
+                                        url_partner = f'web#id={partner_id}&model=res.partner'
+
+                                date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                                communication_name_fmt = self.communication_name_tml.format(
+                                    COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
+                                company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                                                                      company_id=company_id)
+                                responsible_user_fmt = self.responsible_user_tml.format(
+                                    responsible_user_lastname=responsible_user_lastname)
+                                partner_company_fmt = self.partner_company.format(date_deadline_tml=date_deadline_fmt,
+                                                                                  communication_name_tml=communication_name_fmt,
+                                                                                  company_tml=company_fmt,
+                                                                                  responsible_user_tml=responsible_user_fmt)
 
                         if res_user:
-                            user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
+                            user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
                             if user_search:
                                 user_id = user_search[0].partner_id.id
                                 su_id = user_search[0].id
@@ -552,10 +768,6 @@ class ImportComments(models.Model):
                                 user_id = odoobot_id
                                 su_id = odoobot_user_id
 
-                        date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
-                        create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
-                        last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
-
                         if activity['START_TIME']:
                             start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
 
@@ -563,11 +775,17 @@ class ImportComments(models.Model):
 
                         create_date = create_date or last_update_date or start_time_date or deal_create_date
 
+                        # date_deadline = fields.Datetime.now()+timedelta(days=1)
                         date_today = fields.Date.context_today(self)
-                        # note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
 
-                        note = activity['SUBJECT'] + res_user_last_name
+                        note = activity['SUBJECT'] + res_user_last_name + partner_company_fmt
                         summary = activity['SUBJECT']
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
+                                             activity['SUBJECT'])
+                            note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))', '', note)
+                        elif (activity['PROVIDER_TYPE_ID'] == "2"):
+                            note = ' '
 
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
@@ -578,12 +796,154 @@ class ImportComments(models.Model):
                         else:
                             activity_typ = None
 
+                        phone_file_attachments = []
+                        attachment = []
+                        if ('FILES' in activity.keys()):
+                            for phone_file in activity['FILES']:
+                                #
+                                file_id = {'id': phone_file['id']}
+                                req_file = requests.post(f'{B24_URI}/disk.file.get', json=file_id)
+                                if req_file.status_code != 200:
+                                    print('Error accessing to file B24!')
+                                    continue
+
+                                resp_file_json = req_file.json()
+                                res_file = resp_file_json['result']
+
+                                if len(res_file) > 0:
+                                    download_url = res_file['DOWNLOAD_URL']
+                                    download_url = download_url.replace('\\', '')
+                                #
+                                phone_f_name = str(phone_file['id']) + '.mp3'
+                                headers = {'Content-Type': 'audio/mpeg'}
+                                # req = requests.get(phone_file['url'], headers = headers)
+                                req = requests.get(download_url, headers=headers)
+                                req_out = base64.b64encode(req.content).decode('utf-8')
+                                phone_file_attachments.append((phone_f_name, req.content))
+
+
+                                attachment_obj = self.env['ir.attachment'].create({
+                                    'name': phone_f_name,
+                                    'datas': req_out,
+                                    'type': 'binary',
+                                    'mimetype': 'audio/mpeg',
+                                })
+                                attachment.append(attachment_obj.id)
+
                         act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
                                                            summary=summary, note=note)
                         act_env['create_date'] = create_date
                         act_env['create_uid'] = responsible_id
 
+                        act_env_id = act_env.res_id
+                        act_note = act_env.note
+
                         if activity['COMPLETED'] == 'Y':
-                            message_id = act_env.action_feedback(feedback='bitrix24')
+                            message_id = act_env.action_feedback(feedback=' ')
                             act_to_message = self.env['mail.message'].browse([message_id])
-                            act_to_message.write({'date': create_date, 'author_id': user_id})
+                            act_to_message.write(
+                                {'date': create_date, 'author_id': user_id, 'attachment_ids': attachment})
+
+
+        return 1
+
+
+    # def action_import_activities(self):
+    #     deals = self.hello()
+    #     if len(deals) == 0:
+    #         print('Error while loading deals!')
+    #         return
+    #
+    #
+    #     deals_res = self.get_activities(deals)
+    #
+    #     env_deals = self.env['crm.lead'].env
+    #     #  odoo15 _xmlid_to_res_id("base.partner_root")
+    #     # odoobot_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.partner_root")
+    #     # odoobot_user_id = self.env['ir.model.data'].sudo()._xmlid_to_res_id("base.user_root")
+    #     # odoo14
+    #     odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
+    #     odoobot_user_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.user_root")
+    #
+    #     for deal in deals_res.values():
+    #         activity_list = deal['activities']
+    #
+    #         external_id = deal['external_id']
+    #         id = deal['id']
+    #         record = env_deals.ref(external_id)
+    #
+    #         if record:
+    #             if activity_list:
+    #                 dict_users = self.get_username_activities()
+    #                 for activity in activity_list.values():
+    #                     author_id = activity['AUTHOR_ID']
+    #                     responsible_id = activity['RESPONSIBLE_ID']
+    #                     # responsible_id = self.env['res.users'].browse([activity['RESPONSIBLE_ID']])
+    #
+    #                     if len(dict_users) > 0:
+    #                         responsible_user = next((user for user in dict_users if user['ID']==responsible_id), False)
+    #                         responsible_user_lastname = "<p> Ответственный: " + responsible_user['NAME'] + "&nbsp;" + responsible_user['LAST_NAME'] + \
+    #                                                     "</p>"
+    #
+    #                     if len(dict_users) > 0:
+    #                         res_user = next((user for user in dict_users if user['ID']==author_id), False)
+    #                         res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user['LAST_NAME']+"</p>"
+    #
+    #                     if res_user:
+    #                         user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
+    #                         if user_search:
+    #                             user_id = user_search[0].partner_id.id
+    #                             su_id = user_search[0].id
+    #                             res_user_last_name = ''
+    #                         else:
+    #                             # user_id = self.env.uid
+    #                             user_id = odoobot_id
+    #                             su_id = odoobot_user_id
+    #
+    #                     date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
+    #                     create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
+    #                     last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
+    #
+    #                     if activity['START_TIME']:
+    #                         start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
+    #
+    #                     deal_create_date = datetime.fromisoformat(str(record.create_date)).replace(tzinfo=None)
+    #
+    #                     create_date = create_date or last_update_date or start_time_date or deal_create_date
+    #
+    #                     date_today = fields.Date.context_today(self)
+    #                     # note = ' today:'+str(date_today)+' ID:'+activity['ID'] + ' note:'+activity['SUBJECT']
+    #
+    #                     note = activity['SUBJECT'] + res_user_last_name
+    #                     summary = activity['SUBJECT']
+    #
+    #                     if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+    #                         activity_typ = 'mail.mail_activity_data_call'
+    #                     elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+    #                         activity_typ = 'mail.mail_activity_data_email'
+    #                     elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+    #                         activity_typ = 'mail.mail_activity_data_todo'
+    #                     else:
+    #                         activity_typ = None
+    #
+    #                     act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
+    #                                                        summary=summary, note=note)
+    #                     act_env['create_date'] = create_date
+    #                     act_env['create_uid'] = responsible_id
+    #
+    #                     if activity['COMPLETED'] == 'Y':
+    #                         message_id = act_env.action_feedback(feedback='bitrix24')
+    #                         act_to_message = self.env['mail.message'].browse([message_id])
+    #                         act_to_message.write({'date': create_date, 'author_id': user_id})
+
+
+    def action_import_activities_comments(self):
+        bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
+        if not bitrix_hook_url:
+            raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+        B24_URI = bitrix_hook_url
+
+        self.action_import_records()
+        print('import_records--------------:)')
+        self.action_import_activities()
+        print('import_activities============:)')
