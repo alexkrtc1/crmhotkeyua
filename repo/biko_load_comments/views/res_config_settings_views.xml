@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_biko_load_comments" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.biko_load_comments</field>
+        <field name="model">res.config.settings</field>
+<!--        <field name="priority" eval="10"/>-->
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('settings')]" position="inside">
+                <div class="app_settings_block" data-string="biko_load_comments" string="biko_load_comments" data-key="biko_load_comments">
+                    <h2>biko_load_comments</h2>
+
+
+                    <div class="row mt16 o_settings_container">
+                        <div class="o_setting_left_pane">
+                            <label for="bitr_url" string="bitr_url"/>
+                            <field name="bitr_url"/>
+                        </div>
+                    </div>
+
+
+                    <div class="row mt16 o_settings_container">
+                        <div class="o_setting_left_pane">
+                            <label for="allow_activity" string="allow_activity"/>
+                            <field name="allow_activity"/>
+                        </div>
+                    </div>
+
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+
+
+
+<!--<?xml version="1.0" encoding="UTF-8" ?>-->
+<!--<odoo>-->
+<!--    <record id="res_config_settings_view_form_biko_load_comments" model="ir.ui.view">-->
+<!--        <field name="name">res.config.settings.view.form.inherit.biko_load_comments</field>-->
+<!--        <field name="model">res.config.settings</field>-->
+<!--        <field name="priority" eval="10"/>-->
+<!--        <field name="inherit_id" ref="base.res_config_settings_view_form"/>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <xpath expr="//div[hasclass('settings')]" position="inside">-->
+<!--                <div class="app_settings_block" data-string="biko_load_comments" string="biko_load_comments"-->
+<!--                     data-key="biko_load_comments">-->
+<!--                    <h2>biko_load_comments Settings</h2>-->
+<!--                    <div class="row mt16 o_settings_container">-->
+<!--                        <div class="col-12 col-lg-6 o_setting_box">-->
+<!--                            <div class="o_setting_right_pane">-->
+<!--                                <label for="bitr_url"/>-->
+<!--                                <field name="bitr_url"/>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="col-12 col-lg-6 o_setting_box">-->
+<!--                            <div class="o_setting_right_pane">-->
+<!--                                <label for="allow_activity"/>-->
+<!--                                <field name="allow_activity"/>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </xpath>-->
+<!--        </field>-->
+<!--    </record>-->
+
+
+</odoo>
