@@ -259,7 +259,7 @@ class ImportRecs(models.TransientModel):
                             for c_file in comment['FILES'].values():
                                 f_name = c_file['name']
                                 req = requests.get(c_file['urlDownload'])
-                                # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
+
                                 f_attachments.append((f_name, req.content))
                         message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
                         message_rec['date'] = date_time
@@ -516,7 +516,7 @@ class ImportComments(models.Model):
                             for c_file in comment['FILES'].values():
                                 f_name = c_file['name']
                                 req = requests.get(c_file['urlDownload'])
-                                # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
+
                                 f_attachments.append((f_name, req.content))
 
                         author_id = comment['AUTHOR_ID']
