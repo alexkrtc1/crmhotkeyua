@@ -106,5 +106,6 @@ biko_load_comments/*.csv
 biko_load_comments/*.xlsx
 biko_load_comments/*.json
 biko_load_comments/*.txt
+biko_load_comments/*.mp3
 *.yaml
 *.copy
