@@ -1157,33 +1157,5 @@ class ImportComments(models.Model):
         print('import_activities============:)')
 
 
-# class ResConfigSettings(models.TransientModel):
-#     _inherit = 'res.config.settings'
-#
-#     bitrix_url = fields.Char(string="Bitrix Webhook Url", config_parameter='biko_load_comments.bitrix_url')
-#     # allow_planned_activity = fields.Boolean(string="Allow Import Planned Activity")
-#
-#     @api.model
-#     def get_values(self):
-#         res = super(ResConfigSettings, self).get_values()
-#         bitrix_url = self.env["ir.config_parameter"].get_param(
-#             "biko_load_comments.config.bitrix_url")
-#         # allow_planned_activity = self.env['ir.config_parameter'].sudo().get_param(
-#         #     'biko_load_comments.config.allow_planned_activity')
-#         res.update({
-#             'bitrix_url': bitrix_url if type(bitrix_url) else False
-#             # 'allow_planned_activity': allow_planned_activity
-#             }
-#         )
-#         return res
-#
-#     # @api.model
-#     # def set_values(self):
-#     #     # self.env['ir.config_parameter'].sudo().set_param(
-#     #     #     'biko_load_comments.config.bitrix_url', self.bitrix_url)
-#     #     # self.env['ir.config_parameter'].sudo().set_param(
-#     #     #     'biko_load_comments.config.allow_planned_activity', self.allow_planned_activity)
-#     #     super(ResConfigSettings, self).set_values()
-#     #     # return res
 
 
