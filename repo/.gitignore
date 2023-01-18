@@ -108,3 +108,4 @@ biko_load_comments/*.json
 biko_load_comments/*.txt
 *.yaml
 *.copy
+*.mp3
