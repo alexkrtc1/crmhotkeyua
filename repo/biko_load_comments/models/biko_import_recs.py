@@ -949,10 +949,7 @@ class ImportComments(models.Model):
                                     'mimetype': 'audio/mpeg',
                                 })
                                 attachment.append(attachment_obj.id)
-                        # print(record)
-                        # print(activity_typ)
-                        # print(su_id)
-                        # print(date_deadline)
+
                         act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
                                                            summary=summary, note=note)
                         act_env['create_date'] = create_date
