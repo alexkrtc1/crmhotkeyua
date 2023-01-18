@@ -263,7 +263,7 @@ class ImportRecs(models.TransientModel):
                             for c_file in comment['FILES'].values():
                                 f_name = c_file['name']
                                 req = requests.get(c_file['urlDownload'])
-
+                                # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
                                 f_attachments.append((f_name, req.content))
                         message_rec = record.message_post(body=msg, message_type='comment', attachments=f_attachments)
                         message_rec['date'] = date_time
@@ -513,7 +513,7 @@ class ImportComments(models.Model):
         #         packages.append(param_dict)
         #         param_str = ""
         #     i += 1
-        # https://asoft.bitrix24.ua/rest/178/i/crm.contact.list?order[DATE_CREATE]=ASC&select=ID&select=NAME&select=LAST_NAME&select=LEAD_ID&select=COMPANY_ID&select=EMAIL&select=PHONE&select=TYPE_ID&start=50
+        # https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/crm.contact.list?order[DATE_CREATE]=ASC&select=ID&select=NAME&select=LAST_NAME&select=LEAD_ID&select=COMPANY_ID&select=EMAIL&select=PHONE&select=TYPE_ID&start=50
         # for batch in packages:
         #     req = requests.post(f'{B24_URI}/batch', json=batch)
         #     if req.status_code != 200:
@@ -525,7 +525,8 @@ class ImportComments(models.Model):
         #
 
         param_dict = json.loads(param)
-
+        #https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/crm.contact.list?order=%7B%27DATE_CREATE%27%3A+%27ASC%27%7D&select=%5B%27ID%27%2C+%27NAME%27%2C+%27LAST_NAME%27%2C+%27LEAD_ID%27%2C+%27COMPANY_ID%27%2C+%27EMAIL%27%2C+%27PHONE%27%2C+%27TYPE_ID%27%5D&start=50
+        # "https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/crm.contact.list?order[DATE_CREATE]=ASC&select=ID,NAME,LAST_NAME,LEAD_ID,COMPANY_ID,EMAIL,PHONE,TYPE_ID&start=50"
         while 'next' in resp_json:
             start_page += start
             param_dict.update({"start": start_page})
@@ -538,7 +539,43 @@ class ImportComments(models.Model):
         hk_logger.info("contacts loops%s", i)
         return res
 
+        ######
 
+    # def get_comments(self, deals):
+    #     deals_with_files = {}
+    #
+    #     templ_start = '{"halt":0,"cmd": {'
+    #     templ_end = '}}'
+    #
+    #     i = 0
+    #     packages = []
+    #     req_str = ""
+    #
+    #     for deal in deals.values():
+    #
+    #         req_str += f'"{deal["id"]}":"crm.timeline.comment.list?filter[ENTITY_ID]={deal["id"]}&filter[ENTITY_TYPE]=deal",'
+    #         if ((i + 1) % 50 == 0) or (i == len(deals) - 1):
+    #             json_res = json.loads(templ_start + req_str[0:-1] + templ_end)
+    #             packages.append(json_res)
+    #             req_str = ""
+    #         i += 1
+    #
+    #     for batch in packages:
+    #         req = requests.post(f'{B24_URI}/batch', json=batch)
+    #
+    #         if req.status_code != 200:
+    #             print('Error accessing to B24!')
+    #             continue
+    #
+    #         resp_json = req.json()
+    #         res_errors = resp_json['result']['result_error']
+    #         res_comments = resp_json['result']['result']
+    #
+    #         if len(res_errors) > 0:
+    #             for key, val in res_errors.items():
+    #                 print(key, ':', val['error_description'])
+
+    ##########
 
     def action_import_records(self):
         # deals = self.get_deals()
@@ -576,7 +613,7 @@ class ImportComments(models.Model):
                             for c_file in comment['FILES'].values():
                                 f_name = c_file['name']
                                 req = requests.get(c_file['urlDownload'])
-
+                                # req = requests.get('https://asoft.bitrix24.ua/rest/178/jimsij9n3h1qe5ol/download/?token=disk%7CaWQ9MTA4NDczJl89V05kdkNhRG1kNVBra3ZLNEljTVFUVEZDdE01UjZTN1o%3D%7CImRvd25sb2FkfGRpc2t8YVdROU1UQTRORGN6Smw4OVYwNWtka05oUkcxa05WQnJhM1pMTkVsalRWRlVWRVpEZEUwMVVqWlROMW89fDE3OHxqaW1zaWo5bjNoMXFlNW9sIg%3D%3D.egSeeSNXPhvk1wpNPqy9fPiw3wgYzkggAipQ29XoR0k%3D')
                                 f_attachments.append((f_name, req.content))
 
                         author_id = comment['AUTHOR_ID']
@@ -617,6 +654,27 @@ class ImportComments(models.Model):
 
 
     def action_import_activities(self):
+        # url = "https://asoft.bitrix24.ua/bitrix/tools/crm_show_file.php?fileId=244574&ownerTypeId=6&ownerId=175130&auth="
+        # headers = CaseInsensitiveDict()
+        # headers["authority"] = "asoft.bitrix24.ua"
+        # headers["accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+        # headers["accept-language"] = "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
+        # headers["cookie"] = "USER_LANG=ua; BITRIX_SM_UIDL=alexkrtcukr%40hotkey.ua; BITRIX_SM_CC=Y; BX_USER_ID=d06c0a50e923200df548469bde8bad59; BITRIX_SM_SALE_UID=46; BITRIX_SM_TZ=Europe/Kiev; BITRIX_SM_UIDH=iSTjY0ZSIifCRuAGh5HINOjf1AassDtz; BITRIX_SM_kernel=-crpt-kernel_0; BITRIX_SM_PK=%2F1068%2Fbfd3b4cf86f9969167f1255b4f53d9d1; BITRIX_SM_SOUND_LOGIN_PLAYED=Y; PHPSESSID=Qkk7Tnut7rrjV5jpFL6eK0E001xeYYQf; qmb=1068.socservices.1; BITRIX_SM_kernel_0=0R8LTQwnElSKMcMzWQTgc0liCqBpMe28ut8LrNk5tGH8GfNsK0zvlKiER4PFOCOXYi1gLQ3f57z1uEaXo2tQGDH2537oTjo0nIL9U3ZUfZ3GhRB1zA3Ot3xb-EVKD_R81FvHiQtgsuNRKYvF8UKS__6bXlaQas0poXPIHVZ8NmdPBl2mlGcpCmKcRfdCrzuYvaFYd7N6B3e7mYJ8ODf_Ab6YdMvOkLz9iJ0bDJUP46KiSj8O_j_zNvEHphlaPM-GfxhKdpO9Jy_nEzacDJVHneBE8K7PaTcwv4q-6h_F1VaL_vVzNEdrW7HP1yL-4_XtGIbebd9KVrB9IM6oID4Uu-4xs-4Pb5D-g3q4aO_p9VuSNjEzJERpHF6DmPVxPCRj_fAttJnhNDDmBXRf125LVwFnXHNjqNZmi-N1lVf0CjvYArN1qhsxnAY56sqf-SbdPEZn9zu9H-tf8D_FxKHQGRbDNoelcwN5xO04DVsnq2UYUSTygCB_KbY7fywVi0g8gPqCghILJUNdSU65oUEWiPurVTj-nSjr6s3gdO-ZOFoPgGXecOo7RYkGCRqyrvOyTtb0sr7OUysxzRIz_V18BMrTlBaJAO9tw_fIhaKS5sBq-BtLROeFUBu_B4wT45p6oKR-fOU94K8Qd5iKZfrXlxZgsRuSa1DJFRNZ1VcTNYkhjcKHWzKz51yPyV7SovYrSg_luu8avrEoem5bIk1TsCIuk3TXgzBqyiiK6aZX2JotcLmCA_bp2Sdvaz-OY8So3cadpKXciYD5Q8l3c-sAIazhHZA0XtAJ-VIBwTQRTBitZkzKM-VgMS_x5TOY3KUSP4QeinY4T56C-Bmvg9rz4GgWE0P9bk6w1Zc6XzTyJbfdce78wJtG1do57UKWteyYdPwpL7rkAvJfOBkRdBx5eOH7vtq29QfLFxY42S7qKx-YMZwyQ8ePy8Kj8e37t4ZlTUIwg_gKjSSq1mvpXbPvRejHhZrtt8_0L3faYvjqNMG4NnNfcMMy2ohDpAE_ePYlJKiJuz0B8zadiJyqFH2pLX64hVMY7myjDBfVhoiB00AUvAEtuFwxScqv5hnSUorK1qBbFsUCER8FApU6BwlVaJf0yyK_ICnlbb-ObeBOL7VtlduIYLqGLY6tHjzCwgB1ErsNO-qDzDmx1a9_0UaGnamRhpT6GRFbxYrMstL26MDj62V1w2yknZZtFJjIyY_8lg3UUwdONh3MESbUL3wKxtox4Eblrff6tn4pYGd-cufDrQsqoM7r0jU46uy2QdS3lYaoe-CHDtaGcg-8nLz0s72qmef10bOd-qBD8suhk9dJ08tBSDnDlrTNtySFqkScpmCPnindrYOC4vwhKUic7kKoHs8_4I0C5eRAz61heEDJ20P7NEkhvwPkBVzT_yOE4th5Vk-uTlH4ZIIvLMI2cG4-NNWKFEcWS2TMWIEnwBSWYnI5jP5z6bgdHredXAH7UK6A_MMiYWhMgmCSb6scqJ3yOXjvF11pUoJMJkX-5QTNrSdt3-TguBPWBl1lfUROK9i6b1yRKdqAi537_yYFKoGo-q7DAx70SxFb4kOs1ohqbhP7AeRyIi3cUIsfH_Z3znFIQJNen7M9hutpfES-TixdtqR62PD09KRjC8pbnZd19K1d6RmJojYEemeliov5-qQ4mUB3_sOdC5QfBcAyQ9HFuz75ElYfsu4xSRNNRjuyEtVg1gvo5umn8kmENbdnv6BvoUz9ZnYukj8o2Jq_h3hbi8AcCbtR_M4qcmg2inbJg2Dhdx3akLWS_h9WdXk24o107Po6VFwGJZSelL1F6DuF1EnTXN0rfV5W62c0D5H0lwlVmqpR3Z9UIabLAe8OCFCwSp8obg3QcMIn5ga9KjM7PQwHHuoZhqO3EoaGU4Q"
+        # headers["if-modified-since"] = "Thu, 21 Jul 2022 14:28:20 GMT"
+        # headers["if-none-match"] = '"4a85b362d3ac20ff75d023aaadcba96e"'
+        # headers["sec-ch-ua"] = '"Chromium";v="104", "NotA;Brand";v="99", "GoogleChrome";v="104"'
+        # headers["sec-ch-ua-mobile"] = "?0"
+        # headers["sec-ch-ua-platform"] = '"Linux"'
+        # headers["sec-fetch-dest"] = "document"
+        # headers["sec-fetch-mode"] = "navigate"
+        # headers["sec-fetch-site"] = "none"
+        # headers["sec-fetch-user"] = "?1"
+        # headers["upgrade-insecure-requests"] = "1"
+        # headers["user-agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36"
+        #
+        # resp = requests.get(url, headers=headers, allow_redirects=True)
+        #
+        # print(resp.status_code)
 
         #####
         deals = self.hello()
@@ -632,6 +690,8 @@ class ImportComments(models.Model):
                         "select": [ "ID","NAME","LAST_NAME","LEAD_ID","COMPANY_ID","EMAIL","PHONE","TYPE_ID"]
                     }
                 '''
+        # ?filter[ENTITY_ID] = {deal["id"]} & f
+        # data_contacts = "order[DATE_CREATE]=ASC&select=ID,NAME,LAST_NAME,LEAD_ID,COMPANY_ID,EMAIL,PHONE,TYPE_ID&start={s}"
 
         contacts = False
         if not contacts :
@@ -722,7 +782,38 @@ class ImportComments(models.Model):
                                     company_id = company_search[0].id or 0
                                     url_company = f'web#id={company_id}&model=res.partner'
 
-
+                            # partner_company ='''
+                            # <div class ="crm-timeline__card-container">
+                            # <div class ="crm-timeline__card-container_block">
+                            #     <div class ="crm-timeline__card-container_info --inline" >
+                            #         <div class ="crm-timeline__card-container_info-title" > Крайній термін </div>
+                            #             <div class ="crm-timeline__card-container_info-value">
+                            #                 <span class ="crm-timeline__date-pill --color-default --readonly" >
+                            #                     <span> {date_deadline_str} </span>
+                            #                     <span class ="crm-timeline__date-pill_caret" > </span>
+                            #                 </span>
+                            #             </div>
+                            #         </div>
+                            # </div>
+                            # <div class="crm-timeline__card-container_info --inline">
+                            #     <div class="item crm-timeline__card-container_info-title">Клієнт</div>
+                            #          <div class="item crm-timeline__card-container_info-value">
+                            #             <a href=# data-oe-model=res.partner data-oe-id={company_id}  class="crm-timeline__card_link --bold">
+                            #                 {COMPANY_TITLE}&nbsp;{tel}</a>
+                            #         </div>
+                            #     </div>
+                            # <div class="crm-timeline__card-container_info --inline">
+                            #     <div class="crm-timeline__card-container_info-title">
+                            #         Відповідальна особа
+                            #     </div>
+                            #     <div class="crm-timeline__card-container_info-value">
+                            #         <a href="/" class="crm-timeline__card_link --bold">
+                            #          {responsible_user_lastname}</a>
+                            #     </div>
+                            # </div>
+                            # </div>
+                            # '''.format(date_deadline_str=date_deadline_str, COMPANY_TITLE=COMPANY_TITLE,tel=tel,responsible_user_lastname=responsible_user_lastname,
+                            #            company_id=company_id)
                             date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
                             company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE,tel=tel,company_id=company_id)
                             responsible_user_fmt = self.responsible_user_tml.format(responsible_user_lastname=responsible_user_lastname)
@@ -760,7 +851,46 @@ class ImportComments(models.Model):
                                         company_id = company_search[0].id or 0
                                         url_company = f'web#id={company_id}&model=res.partner'
 
-
+                                # partner_company = '''
+                                #                 <div class ="crm-timeline__card-container">
+                                #                 <div class ="crm-timeline__card-container_block">
+                                #                     <div class ="crm-timeline__card-container_info --inline" >
+                                #                         <div class ="crm-timeline__card-container_info-title" > Крайній термін </div>
+                                #                             <div class ="crm-timeline__card-container_info-value">
+                                #                                 <span class ="crm-timeline__date-pill --color-default --readonly" >
+                                #                                     <span> {date_deadline_str} </span>
+                                #                                     <span class ="crm-timeline__date-pill_caret" > </span>
+                                #                                 </span>
+                                #                             </div>
+                                #                         </div>
+                                #                 </div>
+                                #                 <div class="crm-timeline__card-container_info --inline">
+                                #                     <div class="item crm-timeline__card-container_info-title">Клієнт</div>
+                                #                          <div class="item crm-timeline__card-container_info-value">
+                                #                             <a href=# data-oe-model=res.partner data-oe-id={partner_id}  class="crm-timeline__card_link --bold">
+                                #                                 {COMMUNICATIONS_NAME}&nbsp;{tel}</a>
+                                #                     </div>
+                                #                 </div>
+                                #                 <div class="crm-timeline__card-container_info --inline">
+                                #                     <div class="item crm-timeline__card-container_info-title">Компанія</div>
+                                #                          <div class="item crm-timeline__card-container_info-value">
+                                #                             <a href="# data-oe-model=res.partner data-oe-id={company_id}" class="crm-timeline__card_link --bold">
+                                #                                 {COMPANY_TITLE}</a>
+                                #                     </div>
+                                #                 </div>
+                                #                 <div class="crm-timeline__card-container_info --inline">
+                                #                     <div class="crm-timeline__card-container_info-title">
+                                #                         Відповідальна особа
+                                #                     </div>
+                                #                     <div class="crm-timeline__card-container_info-value">
+                                #                         <a href="/" class="crm-timeline__card_link --bold">
+                                #                          {responsible_user_lastname}</a>
+                                #                     </div>
+                                #                 </div>
+                                #                 </div>
+                                #                 '''.format(date_deadline_str=date_deadline_str,COMMUNICATIONS_NAME=COMMUNICATIONS_NAME,tel=tel,
+                                #                             COMPANY_TITLE=COMPANY_TITLE, responsible_user_lastname=responsible_user_lastname,
+                                #                             partner_id=partner_id, company_id=company_id)
 
                                 date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
                                 communication_name_fmt = self.communication_name_tml.format(COMMUNICATIONS_NAME=COMMUNICATIONS_NAME,partner_id=partner_id, tel=tel)
@@ -774,7 +904,34 @@ class ImportComments(models.Model):
                                                                                   responsible_user_tml=responsible_user_fmt)
 
                             else:
-
+                                # partner_company = '<div>' + \
+                                #                   '<div><span>Крайний срок:</span><span class="date_deadline">' + date_deadline_str + '</span></div>' + \
+                                #                   '<div><span>Ответственный:</span>' + '<span>' + responsible_user_lastname + '</span></div>' + \
+                                #                   '</div>'
+                                # partner_company = '''
+                                #                     <div class ="crm-timeline__card-container">
+                                #                     <div class ="crm-timeline__card-container_block">
+                                #                         <div class ="crm-timeline__card-container_info --inline" >
+                                #                             <div class ="crm-timeline__card-container_info-title" > Крайній термін </div>
+                                #                                 <div class ="crm-timeline__card-container_info-value">
+                                #                                     <span class ="crm-timeline__date-pill --color-default --readonly" >
+                                #                                         <span> {date_deadline_str} </span>
+                                #                                         <span class ="crm-timeline__date-pill_caret" > </span>
+                                #                                     </span>
+                                #                                 </div>
+                                #                             </div>
+                                #                     </div>
+                                #                     <div class="crm-timeline__card-container_info --inline">
+                                #                         <div class="crm-timeline__card-container_info-title">
+                                #                             Відповідальна особа
+                                #                         </div>
+                                #                         <div class="crm-timeline__card-container_info-value">
+                                #                             <a href="/" class="crm-timeline__card_link --bold">
+                                #                              {responsible_user_lastname}</a>
+                                #                         </div>
+                                #                     </div>
+                                #                     </div>
+                                #                     '''.format(date_deadline_str=date_deadline_str,responsible_user_lastname=responsible_user_lastname)
                                 date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
                                 responsible_user_fmt = self.responsible_user_tml.format(
                                     responsible_user_lastname=responsible_user_lastname)
@@ -821,8 +978,35 @@ class ImportComments(models.Model):
                                     if partner_search:
                                         partner_id = partner_search[0].id or 0
                                         url_partner = f'web#id={partner_id}&model=res.partner'
-
-
+                                    # partner_company =   '<div>' + \
+                                #                     '<div><span>Крайний срок:</span><span class="date_deadline">' + date_deadline_str + '</span></div>' + \
+                                #                     '<div><span>Ответственный:</span>' + '<span>' + responsible_user_lastname + '</span></div>' + \
+                                #                      '</div>'
+                                # partner_company = '''
+                                #                         <div class ="crm-timeline__card-container">
+                                #                         <div class ="crm-timeline__card-container_block">
+                                #                             <div class ="crm-timeline__card-container_info --inline" >
+                                #                                 <div class ="crm-timeline__card-container_info-title" > Крайній термін </div>
+                                #                                     <div class ="crm-timeline__card-container_info-value">
+                                #                                         <span class ="crm-timeline__date-pill --color-default --readonly" >
+                                #                                             <span> {date_deadline_str} </span>
+                                #                                             <span class ="crm-timeline__date-pill_caret" > </span>
+                                #                                         </span>
+                                #                                     </div>
+                                #                                 </div>
+                                #                         </div>
+                                #                         <div class="crm-timeline__card-container_info --inline">
+                                #                             <div class="crm-timeline__card-container_info-title">
+                                #                                 Відповідальна особа
+                                #                             </div>
+                                #                             <div class="crm-timeline__card-container_info-value">
+                                #                                 <a href="/" class="crm-timeline__card_link --bold">
+                                #                                  {responsible_user_lastname}</a>
+                                #                             </div>
+                                #                         </div>
+                                #                         </div>
+                                #                         '''.format(date_deadline_str=date_deadline_str,
+                                #                                     responsible_user_lastname=responsible_user_lastname)
                                 date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
                                 communication_name_fmt = self.communication_name_tml.format(
                                     COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
@@ -874,7 +1058,9 @@ class ImportComments(models.Model):
                         else:
                             activity_typ = None
 
-
+                        #   https://asoft.bitrix24.ua/bitrix/tools/crm_show_file.php?fileId=244574&ownerTypeId=6&ownerId=175130&auth=
+                        #   https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/
+                        #   https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/bitrix/tools/crm_show_file.php?fileId=244574&ownerTypeId=6&ownerId=175130&auth=
                         phone_file_attachments = []
                         attachment = []
                         if ('FILES' in activity.keys()):
@@ -900,7 +1086,9 @@ class ImportComments(models.Model):
                                 req_out = base64.b64encode(req.content).decode('utf-8')
                                 phone_file_attachments.append((phone_f_name, req.content))
                                 #
-
+                                # with open('/opt/odoo14/pjts/learn/repo/biko_load_comments/audio1.mp3','w+b') as f:
+                                #     f.write(req.content)
+                                #     f.close()
 
                                 attachment_obj = self.env['ir.attachment'].create({
                                     'name': phone_f_name,
@@ -909,7 +1097,10 @@ class ImportComments(models.Model):
                                     'mimetype': 'audio/mpeg',
                                 })
                                 attachment.append(attachment_obj.id)
-
+                        # print(record)
+                        # print(activity_typ)
+                        # print(su_id)
+                        # print(date_deadline)
                         act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
                                                            summary=summary, note=note)
                         act_env['create_date'] = create_date
@@ -966,6 +1157,33 @@ class ImportComments(models.Model):
         print('import_activities============:)')
 
 
-
+# class ResConfigSettings(models.TransientModel):
+#     _inherit = 'res.config.settings'
+#
+#     bitrix_url = fields.Char(string="Bitrix Webhook Url", config_parameter='biko_load_comments.bitrix_url')
+#     # allow_planned_activity = fields.Boolean(string="Allow Import Planned Activity")
+#
+#     @api.model
+#     def get_values(self):
+#         res = super(ResConfigSettings, self).get_values()
+#         bitrix_url = self.env["ir.config_parameter"].get_param(
+#             "biko_load_comments.config.bitrix_url")
+#         # allow_planned_activity = self.env['ir.config_parameter'].sudo().get_param(
+#         #     'biko_load_comments.config.allow_planned_activity')
+#         res.update({
+#             'bitrix_url': bitrix_url if type(bitrix_url) else False
+#             # 'allow_planned_activity': allow_planned_activity
+#             }
+#         )
+#         return res
+#
+#     # @api.model
+#     # def set_values(self):
+#     #     # self.env['ir.config_parameter'].sudo().set_param(
+#     #     #     'biko_load_comments.config.bitrix_url', self.bitrix_url)
+#     #     # self.env['ir.config_parameter'].sudo().set_param(
+#     #     #     'biko_load_comments.config.allow_planned_activity', self.allow_planned_activity)
+#     #     super(ResConfigSettings, self).set_values()
+#     #     # return res
 
 
