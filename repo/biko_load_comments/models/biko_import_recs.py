@@ -961,9 +961,10 @@ class ImportComments(models.Model):
         B24_URI = bitrix_hook_url
 
         self.action_import_records()
-        print('import_records--------------:)')
+        print('import_records--------------:) ')
         self.action_import_activities()
-        print('import_activities============:)')
+        print('import_activities============:) ')
+
 
 
 
