@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <data>
+        <record id="res_config_settings_view_form" model="ir.ui.view">
+            <field name="name">biko_load_comments.res.config.settings.view.form.inherit.crm</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[@id='multi_company']" position="after">
+                    <h2>Settings load comments and activities</h2>
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-lg-6 o_setting_box">
+                            <div class="o_setting_right_pane ml16">
+                                <div class="content-group">
+                                    <div class="mt16 row">
+                                        <label for="bitrix_url" class="col-xs-3 col-md-6 o_light_label"/>
+                                        <field name="bitrix_url" class="oe_inline"/>
+                                    </div>
+                                </div>
+<!--                                <div class="content-group">-->
+<!--                                    <div class="mt16 row">-->
+<!--                                        <label for="allow_planned_activity" class="col-xs-3 col-md-6 o_light_label"/>-->
+<!--                                        <field name="allow_planned_activity" class="oe_inline"/>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+                            </div>
+
+                        </div>
+                    </div>
+                </xpath>
+
+            </field>
+        </record>
+
+
+        <!--                <record id="action_biko_load_comments_settings" model="ir.actions.act_window">-->
+        <!--                    <field name="name">BIKO Load Comments Settings</field>-->
+        <!--                    <field name="type">ir.actions.act_window</field>-->
+        <!--                    <field name="res_model">res.config.settings</field>-->
+        <!--                    <field name="view_id" ref="res_config_settings_view_form"/>-->
+        <!--                    <field name="view_mode">form</field>-->
+        <!--                    <field name="target">inline</field>-->
+        <!--                    <field name="context">{'module':'biko_load_comments'}</field>-->
+        <!--                </record>-->
+
+
+        <!--                <menuitem-->
+        <!--                id="menu_biko_load_comments_settings"-->
+        <!--                name="Settings Load Comments"-->
+        <!--                parent="crm.crm_menu_config"-->
+        <!--                sequence="1"-->
+        <!--                action="action_biko_load_comments_settings"-->
+        <!--                />-->
+    </data>
+</odoo>
