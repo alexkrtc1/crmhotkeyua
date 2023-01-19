@@ -10,7 +10,7 @@ import yaml
 import os
 import re
 from odoo.exceptions import UserError
-from . import mail_tml
+from . import load_comments_mail_tml
 import urllib.parse
 import logging
 
@@ -327,11 +327,11 @@ class ImportRecs(models.TransientModel):
 class ImportComments(models.Model):
     _inherit = 'crm.lead'
 
-    partner_company = mail_tml.partner_company
-    date_deadline_tml = mail_tml.date_deadline_tml
-    communication_name_tml = mail_tml.communication_name_tml
-    company_tml = mail_tml.company_tml
-    responsible_user_tml = mail_tml.responsible_user_tml
+    partner_company = load_comments_mail_tml.partner_company_tml
+    date_deadline_tml = load_comments_mail_tml.date_deadline_tml
+    communication_name_tml = load_comments_mail_tml.communication_name_tml
+    company_tml = load_comments_mail_tml.company_tml
+    responsible_user_tml = load_comments_mail_tml.responsible_user_tml
     # contacts = None
 
     def test(self):

@@ -1,4 +1,4 @@
-partner_company = '''
+partner_company_tml = '''
                 <div class ="crm-timeline__card-container">
                     <div class ="crm-timeline__card-container_block">
                         {date_deadline_tml}
