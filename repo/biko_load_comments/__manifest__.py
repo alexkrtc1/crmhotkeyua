@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 {
     'name': "BIKO: Import comments to opportunities",
-    'version': '1.1.2',
+    'version': '14.0.0.1.3',
+    'summary': 'Import comments and activities to opportunities,leads. Last Update 24.01.2023',
+    'description': 'Import comments and activities to opportunities,leads. Last Update 24.01.2023',
     'author': 'Borovlev AS and Hotkey',
     'company': 'BIKO,HOTKEY',
     "depends": ['base', 'crm'],
     "data": [
         'wizard/biko_import_recs_views.xml',
-        'security/ir.model.access.csv',
+        # 'security/ir.model.access.csv',
         'views/assets.xml',
         'views/res_config_settings_views.xml'
 

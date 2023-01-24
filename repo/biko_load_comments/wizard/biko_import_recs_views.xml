@@ -27,24 +27,24 @@
         <field name="code">model.action_import_activities_comments()</field>
     </record>
 
-    <record id="biko_import_recs_view" model="ir.ui.view">
-        <field name="name">biko.import.recs.view</field>
-        <field name="model">biko.import.recs</field>
-        <field name="arch" type="xml">
-            <form>
-                <sheet>
-                    <!--                    <field name="file" filename="file_name"/>-->
-                    <!--                    <field name="file_name" invisible="1"/>-->
-                    <!--                    <field name="charset"/>-->
-                </sheet>
-                <footer>
-                    <button type="object" name="action_import_records" class="btn btn-primary"
-                            string="Import"/>
-                    <button string="Cancel" special="cancel"/>
-                </footer>
-            </form>
-        </field>
-    </record>
+<!--    <record id="biko_import_recs_view" model="ir.ui.view">-->
+<!--        <field name="name">biko.import.recs.view</field>-->
+<!--        <field name="model">biko.import.recs</field>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <form>-->
+<!--                <sheet>-->
+<!--                    &lt;!&ndash;                    <field name="file" filename="file_name"/>&ndash;&gt;-->
+<!--                    &lt;!&ndash;                    <field name="file_name" invisible="1"/>&ndash;&gt;-->
+<!--                    &lt;!&ndash;                    <field name="charset"/>&ndash;&gt;-->
+<!--                </sheet>-->
+<!--                <footer>-->
+<!--                    <button type="object" name="action_import_records" class="btn btn-primary"-->
+<!--                            string="Import"/>-->
+<!--                    <button string="Cancel" special="cancel"/>-->
+<!--                </footer>-->
+<!--            </form>-->
+<!--        </field>-->
+<!--    </record>-->
 
 
     <record id="biko_crm_lead_view_tree" model="ir.ui.view">
