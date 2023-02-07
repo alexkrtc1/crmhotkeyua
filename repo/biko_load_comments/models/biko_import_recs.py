@@ -13,13 +13,16 @@ from odoo.exceptions import UserError
 # from . import load_comments_mail_tml
 import urllib.parse
 import logging
+from fast_bitrix24 import Bitrix
+from fast_bitrix24 import BitrixAsync
 
+# pip install fast-bitrix24
 
-B24_URI = ''
+B24_URI = 'https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/'
 # RESULT_FILE = ''
 # SOURCE_FILE = ''
 # CHARSET = ''
-# contacts = None
+contacts = None
 
 relpath = os.path.dirname(os.path.realpath(__file__))
 hk_logger = logging.getLogger(__name__)
@@ -33,11 +36,27 @@ hk_logger = logging.getLogger(__name__)
 
 headers = CaseInsensitiveDict()
 headers["Content-Type"] = "application/json"
-
-
+b = Bitrix(B24_URI)
+# activities_2 = b.get_all(
+#             'crm.activity.list',
+#             params={
+#                 'select': ['*', 'COMMUNICATIONS'],
+#                 'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': 7717}
+#             })
 
 class ImportComments(models.Model):
     _inherit = 'crm.lead'
+
+    def __int__(self):
+        bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
+        if not bitrix_hook_url:
+            raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+        global B24_URI
+        B24_URI = bitrix_hook_url
+        # global b
+        # b = Bitrix(B24_URI)
+
+
 
     partner_company_tml = '''
                     <div class ="crm-timeline__card-container">
@@ -97,11 +116,6 @@ class ImportComments(models.Model):
 
     # contacts = None
 
-    # def test(self):
-    #     a=1
-    #     b=3
-    #     print(a+b)
-
     def hello(self):
         deals = dict()
         selected = self.env.context["active_ids"]
@@ -123,6 +137,11 @@ class ImportComments(models.Model):
 
 
     def get_comments(self, deals):
+        # bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
+        # if not bitrix_hook_url:
+        #     raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+        # global B24_URI
+        # B24_URI = bitrix_hook_url
         deals_with_files = {}
 
         templ_start = '{"halt":0,"cmd": {'
@@ -191,31 +210,166 @@ class ImportComments(models.Model):
 
 
     def get_activities(self,deals):
+        global  B24_URI
+        global b
 
+        activities_3 = b.get_all('crm.activity.list',params={'select': ['*', 'COMMUNICATIONS'],'filter': {'OWNER_TYPE_ID': 3, 'OWNER_ID': 7495}})
+
+
+        activities_2 = b.get_all(
+            'crm.activity.list',
+            params={
+                'select': ['*', 'COMMUNICATIONS'],
+                'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': 5449}
+            })
+        # activities_3 = activities_3 + activities_2
+        # activities_sorted = sorted(activities_3, key=lambda i: i['ID'])
+        # json_activities = json.dumps(activities_sorted, ensure_ascii=False)
+
+        #     https://asoft.bitrix24.ua/rest/178/i/crm.contact.list?order[DATE_CREATE]=ASC&select=ID&select=NAME&select=LAST_NAME&select=LEAD_ID&select=COMPANY_ID&select=EMAIL&select=PHONE&select=TYPE_ID&start=50
+        #     https://asoft.bitrix24.ua/rest/178/i/crm.activity.list?order[DATE_CREATE]=ASC&select=ID&select=NAME&select=LAST_NAME&select=LEAD_ID&select=COMPANY_ID&select=EMAIL&select=PHONE&select=TYPE_ID&start=50
+        deals_with_files = {}
+
+
+        templ_start = '{"halt":0,"cmd": {'
+        templ_end = '}}'
+        i = 0
+        packages = []
+        req_str = ""
+
+        #
+        # data_id = f'{{"order": {{"ID": "DESC"}},"filter": {{"OWNER_ID": 7717}}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+        # json_res = json.dumps(json.loads(data_id))
+        # req = requests.post(f'{B24_URI}/crm.activity.list', headers=headers, data=json_res)
+        # # req = requests.post(f'{B24_URI}crm.activity.list', data=json_res)
+        #
+        # if req.status_code != 200:
+        #     print('Error accessing to B24!')
+        #
+        #
+        # resp_json = req.json()
+        # res_activity = resp_json['result']
+        #
         for deal in deals.values():
-            # COMPLETED
-            allow_planned_activity = bool(self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.allow_activity'))
-            if allow_planned_activity:
-                data_id = f'{{"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": {deal["id"]} }}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
-            else:
-                data_id = f'{{"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": {deal["id"]},"COMPLETED":"YES" }}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
-            json_res = json.dumps(json.loads(data_id))
-            req = requests.post(f'{B24_URI}/crm.activity.list', headers=headers, data=json_res)
-            # req = requests.post(f'{B24_URI}crm.activity.list', data=json_res)
+            req_str += f'"{deal["id"]}":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]={deal["id"]}&filter[OWNER_TYPE_ID]=2&select=*&select=COMMUNICATIONS",'
+            # req_str += '"7717":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]=7717&filter[OWNER_TYPE_ID]=2&select=*&select=COMMUNICATIONS",'
+            # req_str += '"7717":"crm.activity.list?filter[OWNER_ID]=7717&select=ID&select=SUBJECT&select=DESCRIPTION",'
+            # '{"halt":0,"cmd": {'
+            # templ_end = '}}'
+            # curl  -s 'https://asoft.bitrix24.ua/rest/178/in25sh/batch'\
+            # -H "Content-Type: application/json;charset=utf-8" -d '{"halt":0,"cmd": {"7717":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]=7717&filter[OWNER_TYPE_ID]=2&select=*&select=COMMUNICATIONS"}}' | json_pp -o '/home/alexandr/response1.txt'
+            # curl - s 'https://asoft.bitrix24.ua/rest/178/i/batch' \
+            # - H "Content-Type: application/json;charset=utf-8" - d '{"halt":0,"cmd": {"7717":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]=7717&filter[OWNER_TYPE_ID]=2&select=*&select=COMMUNICATIONS"}}' | json_pp - o '/home/alexandr/response1.txt'
+            # curl - s
+            # 'https://asoft.bitrix24.ua/rest/178/i/batch' - H
+            # "Content-Type: application/json;charset=utf-8" - d
+            # '{"halt":0,"cmd": {"7717":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]=7717&filter[OWNER_TYPE_ID]=2&select=*&select=COMMUNICATIONS"}}' | json_pp
+            if ((i + 1) % 50 == 0) or (i == len(deals) - 1):
+                json_res = json.loads(templ_start + req_str[0:-1] + templ_end)
+                packages.append(json_res)
+                req_str = ""
+            i += 1
+
+
+        for batch in packages:
+            req = requests.post(f'{B24_URI}/batch', json=batch)
 
             if req.status_code != 200:
                 print('Error accessing to B24!')
                 continue
-            #
+
+
+
+            # param_str = json.dumps(req,ensure_ascii=False)
             resp_json = req.json()
-            res_activity = resp_json['result']
+            res_errors = resp_json['result']['result_error']
+            res = resp_json['result']['result']
+
+            if len(res_errors) > 0:
+                for key, val in res_errors.items():
+                    print(key, ':', val['error_description'])
+
+            if len(res) > 0:
+                for deal_id, activity in res.items():
+                    deal = deals[deal_id]
+                    for activity_line in activity:
+                        deal['activities'].update({activity_line['ID']: activity_line})
+
             #
-            if len(res_activity) > 0:
-                for activity in res_activity:
-                    deal = deals[activity['OWNER_ID']]
-                    deal['activities'].update({activity['ID']: activity})
+            # for deal in deals.values():
+            #     # COMPLETED
+            #     allow_planned_activity = bool(self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.allow_activity'))
+            #     if allow_planned_activity:
+            #         data_id = f'{{"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": {deal["id"]} }}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+            #     else:
+            #         data_id = f'{{"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": {deal["id"]},"COMPLETED":"YES" }}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+
+
+            # {
+            #         order:{ "ID": "DESC" },
+            #         filter:
+            #         {
+            #             "OWNER_TYPE_ID": 3,
+            #             "OWNER_ID": 102
+            #         },
+            #         select:[ "*", "COMMUNICATIONS" ]
+            # data_id = f'{{"order": {{"ID": "DESC"}},"filter": {{"OWNER_TYPE_ID": 2,"OWNER_ID": 7717}}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+            # json_res = json.dumps(json.loads(data_id))
+            # req = requests.post(f'{B24_URI}/crm.activity.list', headers=headers, data=json_res)
+            # # req = requests.post(f'{B24_URI}crm.activity.list', data=json_res)
+            #
+            # if req.status_code != 200:
+            #     print('Error accessing to B24!')
+            #     # continue
+            #
+            # resp_json = req.json()
+            # res_activity = resp_json['result']
+
+            # if len(res_activity) > 0:
+            #     for activity in res_activity:
+            #         deal = deals[activity['OWNER_ID']]
+            #         deal['activities'].update({activity['ID']: activity})
+
         return deals
 
+    def get_activities_bitrix(self, deals):
+        global B24_URI
+        global b
+
+        for deal in deals.values():
+            results_batch = b.call_batch({
+                'halt': 0,
+                'cmd': {
+                    'contacts': f'crm.deal.contact.items.get?id={deal["id"]}',
+                    'activities_2': f'crm.activity.list?filter[OWNER_ID]={deal["id"]}&filter[OWNER_TYPE_ID]=2&select[]=*&select[]=COMMUNICATIONS',
+                    'activities_3': 'crm.activity.list?filter[OWNER_ID]=$result[contacts][0][CONTACT_ID]&filter[OWNER_TYPE_ID]=3&select[]=*&select[]=COMMUNICATIONS'
+                }
+            })
+            #
+            # b.call_batch({
+            #     'halt': 0,
+            #     'cmd': {
+            #         'activities_2': f'crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]=5449&filter[OWNER_TYPE_ID]=2&select[]=OWNER_TYPE_ID&select[]=COMMUNICATIONS'
+            #     }
+            # })
+            # activities_2 = b.get_all(
+            #     'crm.activity.list',
+            #     params={
+            #         'select': ['*', 'COMMUNICATIONS'],
+            #         'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': f'{deal["id"]}'}
+            #     })
+            #
+            if len(results_batch['activities_2']) > 0:
+                res_activities = results_batch['activities_2'] + results_batch['activities_3']
+                deal['activities'].update({activ['ID']: activ for activ in res_activities})
+
+        return deals
+
+
+    def  get_all_bitrix(self, method, params):
+        global b
+        entity_list = b.get_all(method, params=params)
+        return entity_list
 
     def get_username_activities(self):
             bitrix_user = {'lastname' : ''}
@@ -311,7 +465,7 @@ class ImportComments(models.Model):
             return
 
         deals_res, deals_with_files = self.get_comments(deals)
-        deals_res = self.get_activities(deals_res)
+        # deals_res = self.get_activities(deals_res)
 
         env_deals = self.env['crm.lead'].env
         odoobot_id = self.env['ir.model.data'].xmlid_to_res_id("base.partner_root")
@@ -358,33 +512,42 @@ class ImportComments(models.Model):
 
 
     def action_import_activities(self):
-
-        #####
         deals = self.hello()
         if len(deals) == 0:
             print('Error while loading deals!')
             return
 
-        deals_res = self.get_activities(deals)
+        deals_res = self.get_activities_bitrix(deals)
 
-        data_contacts = '''
-                     { 
-                        "order": { "DATE_CREATE": "ASC" },
-                        "select": [ "ID","NAME","LAST_NAME","LEAD_ID","COMPANY_ID","EMAIL","PHONE","TYPE_ID"]
-                    }
-                '''
+        data_contacts = {
+            # "order": { "DATE_CREATE": "ASC" },
+            "select": ["ID", "NAME", "LAST_NAME", "LEAD_ID", "COMPANY_ID", "EMAIL", "PHONE", "TYPE_ID"]
+        }
+        global contacts
+        if not contacts:
+            contacts = self.get_all_bitrix('crm.contact.list', data_contacts)
+            # contacts = self.post_from_url(f'{B24_URI}/crm.contact.list', data_contacts)
 
-        contacts = False
-        if not contacts :
-            contacts = self.post_from_url(f'{B24_URI}/crm.contact.list', data_contacts)
+        #test activity
+        # data_id = f'{{"order": {{"ID": "DESC"}},"filter": {{"OWNER_ID": 7717}}  ,"select":[ "*", "COMMUNICATIONS" ] }}'
+        # req_str += f'"{deal["id"]}":"crm.activity.list?order[CREATED]=DESC&filter[OWNER_ID]={deal["id"]}&select=*&select=COMMUNICATIONS",'
+        # data_contacts = '''
+        #                      {
+        #                         "order": { "OWNER_ID": "DESC" },
+        #                         "filter": {"OWNER_ID": 7717 },
+        #                         "select": [ "*","COMMUNICATIONS"]
+        #                     }
+        #                 '''
+        #
+        # activity_test = self.post_from_url(f'{B24_URI}/crm.activity.list', data_contacts)
 
 
-        data_company = '''
-                     { 
-                        "order": { "DATE_CREATE": "ASC" },
-                        "select": ["ID", "TITLE", "CURRENCY_ID", "REVENUE","PHONE","EMAIL","ADDRESS"]
-                    }
-                '''
+        # data_company = '''
+        #              {
+        #                 "order": { "DATE_CREATE": "ASC" },
+        #                 "select": ["ID", "TITLE", "CURRENCY_ID", "REVENUE","PHONE","EMAIL","ADDRESS"]
+        #             }
+        #         '''
         # "crm.company.list",
         # {
         #     order: {"DATE_CREATE": "ASC"},
@@ -423,10 +586,15 @@ class ImportComments(models.Model):
                         # message = locale_date_str + " тел:" + partner_phone + " Только что был пропущен звонок от" + partner_name + "<a href=# data-oe-model=crm.phonecall data-oe-id=%d>#%s - Ссылка на звонок</a>" % (record.id, record.name)
                         author_id = activity['AUTHOR_ID']
                         responsible_id = activity['RESPONSIBLE_ID']
-                        ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][0]['ENTITY_TYPE_ID'])
-                        ENTITY_ID = activity['COMMUNICATIONS'][0]['ENTITY_ID']
-                        # COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
-                        tel = activity['COMMUNICATIONS'][0]['VALUE']
+                        ENTITY_TYPE_ID = False
+                        ENTITY_ID = False
+                        if 'COMMUNICATIONS' in activity.keys():
+                            ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][0]['ENTITY_TYPE_ID'])
+                            ENTITY_ID = activity['COMMUNICATIONS'][0]['ENTITY_ID']
+                            # COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                            tel = activity['COMMUNICATIONS'][0]['VALUE']
+
+
                         # partner_company = ''
 
                         company_id = 0
@@ -478,10 +646,10 @@ class ImportComments(models.Model):
 
                             if len(contacts) > 0:
                                 contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID), False)
-                                contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact['LAST_NAME'] + "</p>"
+                                contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (contact['LAST_NAME'] or '') + "</p>"
 
                             if contact:
-                                partner_search = self.env['res.partner'].search([('name', 'like', contact['LAST_NAME']),('name', 'like', contact['NAME'])])
+                                partner_search = self.env['res.partner'].search([('name', 'like', (contact['LAST_NAME'] or '')),('name', 'like', contact['NAME'])])
                                 if partner_search:
                                     partner_id = partner_search[0].id or 0
                                     url_partner = f'web#id={partner_id}&model=res.partner'
@@ -525,8 +693,9 @@ class ImportComments(models.Model):
                                                                                   responsible_user_tml=responsible_user_fmt)
 
                         else:
-                            if len(activity['COMMUNICATIONS']) > 1:
-                                if(len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
+                            if 'COMMUNICATIONS' in activity.keys():
+                                if len(activity['COMMUNICATIONS']) > 1:
+                                 if(len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
 
                                     COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['NAME'] + ' ' + \
                                                           activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['LAST_NAME']
@@ -574,6 +743,8 @@ class ImportComments(models.Model):
                                                                                   communication_name_tml=communication_name_fmt,
                                                                                   company_tml=company_fmt,
                                                                                   responsible_user_tml=responsible_user_fmt)
+                            else:
+                                temp_var = 0
 
                         if res_user:
                             user_search  = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
@@ -597,13 +768,15 @@ class ImportComments(models.Model):
                         # date_deadline = fields.Datetime.now()+timedelta(days=1)
                         date_today = fields.Date.context_today(self)
 
-                        note = activity['SUBJECT'] +res_user_last_name+ partner_company_fmt
+                        note = (activity['DESCRIPTION'] or '') +res_user_last_name+ partner_company_fmt
                         summary = activity['SUBJECT']
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок', activity['SUBJECT'])
-                            note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
+                            # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
                         elif(activity['PROVIDER_TYPE_ID'] =="2"):
                             note = ' '
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
 
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
                             activity_typ = 'mail.mail_activity_data_call'
@@ -667,6 +840,8 @@ class ImportComments(models.Model):
                         # """SELECT * FROM information_schema.columns WHERE table_name = 'mail_activity' """)
                         act_env_id = act_env.res_id
                         act_note = act_env.note
+                        if create_date < last_update_date: create_date = last_update_date
+
 
                         if activity['COMPLETED'] == 'Y':
                             message_id = act_env.action_feedback(feedback=' ')

@@ -56,7 +56,7 @@
                 <header>
                     <button name="action_import_activities_comments" class="btn btn-primary" type="object"
                             string="Import activities and comments"/>
-                    <button name="action_import_records" attrs="{'invisible':True}" class="btn btn-primary"   type="object"
+                    <button name="action_import_records" attrs="{'invisible':False}" class="btn btn-primary"   type="object"
                             string="Import comments"
                     />
                     <button name="action_import_activities" attrs="{'invisible':True}" class="btn btn-primary" type="object"
