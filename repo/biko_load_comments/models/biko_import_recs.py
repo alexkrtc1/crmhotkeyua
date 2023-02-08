@@ -18,7 +18,7 @@ from fast_bitrix24 import BitrixAsync
 
 # pip install fast-bitrix24
 
-B24_URI = 'https://asoft.bitrix24.ua/rest/178/in25s0uxw7tr0dnh/'
+B24_URI = ''
 # RESULT_FILE = ''
 # SOURCE_FILE = ''
 # CHARSET = ''
