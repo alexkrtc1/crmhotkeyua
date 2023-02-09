@@ -1,0 +1,6 @@
+aiohttp
+asyncio
+tqdm
+more_itertools
+icontract
+beartype>=0.10.0
