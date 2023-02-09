@@ -36,7 +36,7 @@ hk_logger = logging.getLogger(__name__)
 
 headers = CaseInsensitiveDict()
 headers["Content-Type"] = "application/json"
-b = Bitrix(B24_URI)
+# b = Bitrix(B24_URI)
 # activities_2 = b.get_all(
 #             'crm.activity.list',
 #             params={
