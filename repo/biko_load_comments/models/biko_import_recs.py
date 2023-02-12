@@ -1,4 +1,4 @@
-from odoo import models, fields, api, _
+from odoo import models, fields, api,modules,sql_db, _
 import base64
 import json
 from datetime import datetime
@@ -6,26 +6,58 @@ import requests
 from requests.structures import CaseInsensitiveDict
 from datetime import timedelta
 import csv
-import yaml
+# import yaml
 import os
 import re
+from odoo import tools
 from odoo.exceptions import UserError
 # from . import load_comments_mail_tml
 import urllib.parse
 import logging
+from odoo.api import Environment, SUPERUSER_ID
 from fast_bitrix24 import Bitrix
-from fast_bitrix24 import BitrixAsync
+# from fast_bitrix24 import BitrixAsync
+# from .biko_load_res_config_settings import ResConfigSettings
+# from contextlib import closing
+# import odoo
 
 # pip install fast-bitrix24
 
+# with api.Environment.manage():
+#     # registry = modules.registry.RegistryManager.get(tools.config['db_name'])
+#     registry = modules.registry.Registry(tools.config['db_name'])
+#     with registry.cursor() as cr:
+#         # Load our context and environment given the database cursor and UID
+#         # ctx = api.Environment(cr, SUPERUSER_ID, {})['res.users'].context_get()
+#         ctx = api.Environment(cr, SUPERUSER_ID, {})['res.users']
+#         env = api.Environment(cr, SUPERUSER_ID, ctx)
+        # config = env['ir.config_parameter'].get_param('biko_load_comments.bitr_url', 'url')
+
+hk_logger = logging.getLogger(__name__)
+def get_config_bitrix(param):
+    try:
+        db = sql_db.db_connect(tools.config['db_name'])  # You can get the db name from config
+        cr = db.cursor()
+        # cr.execute("select * from ir_config_parameter where key='biko_load_comments.bitr_url'")
+        cr.execute(f"select * from ir_config_parameter where key='{param}'")
+        data = cr.dictfetchall()[0]['value']
+        cr.commit()
+        cr.close()
+    except Exception as e:
+        hk_logger.error("getting config parameter error encountered: {}".format(e), exc_info=True)
+    return data
+
 B24_URI = ''
+B24_URI = get_config_bitrix('biko_load_comments.bitr_url')
+b = False
+b = Bitrix(B24_URI)
 # RESULT_FILE = ''
 # SOURCE_FILE = ''
 # CHARSET = ''
-contacts = None
-
+contacts = False
+dict_users = False
 relpath = os.path.dirname(os.path.realpath(__file__))
-hk_logger = logging.getLogger(__name__)
+
 
 # with open(relpath + '/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
 #     objects = yaml.load(yaml_file, yaml.Loader)
@@ -36,26 +68,24 @@ hk_logger = logging.getLogger(__name__)
 
 headers = CaseInsensitiveDict()
 headers["Content-Type"] = "application/json"
-# b = Bitrix(B24_URI)
-# activities_2 = b.get_all(
-#             'crm.activity.list',
-#             params={
-#                 'select': ['*', 'COMMUNICATIONS'],
-#                 'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': 7717}
-#             })
+
+
 
 class ImportComments(models.Model):
     _inherit = 'crm.lead'
 
-    def __int__(self):
-        bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
-        if not bitrix_hook_url:
-            raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
-        global B24_URI
-        B24_URI = bitrix_hook_url
+
+    def __init__(self,pool, cr):
+        pass
+        # bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
+        # if not bitrix_hook_url:
+        #     raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+        # global B24_URI
+        # B24_URI = bitrix_hook_url
         # global b
         # b = Bitrix(B24_URI)
-
+        # init_res = super(self).__init__(pool, cr)
+        # return init_res
 
 
     partner_company_tml = '''
@@ -210,18 +240,16 @@ class ImportComments(models.Model):
 
 
     def get_activities(self,deals):
-        global  B24_URI
-        global b
-
-        activities_3 = b.get_all('crm.activity.list',params={'select': ['*', 'COMMUNICATIONS'],'filter': {'OWNER_TYPE_ID': 3, 'OWNER_ID': 7495}})
-
-
-        activities_2 = b.get_all(
-            'crm.activity.list',
-            params={
-                'select': ['*', 'COMMUNICATIONS'],
-                'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': 5449}
-            })
+        # global  B24_URI
+        # global b
+        #
+        # activities_3 = b.get_all('crm.activity.list',params={'select': ['*', 'COMMUNICATIONS'],'filter': {'OWNER_TYPE_ID': 3, 'OWNER_ID': 7495}})
+        # activities_2 = b.get_all(
+        #     'crm.activity.list',
+        #     params={
+        #         'select': ['*', 'COMMUNICATIONS'],
+        #         'filter': {'OWNER_TYPE_ID': 2, 'OWNER_ID': 5449}
+        #     })
         # activities_3 = activities_3 + activities_2
         # activities_sorted = sorted(activities_3, key=lambda i: i['ID'])
         # json_activities = json.dumps(activities_sorted, ensure_ascii=False)
@@ -337,12 +365,16 @@ class ImportComments(models.Model):
         global b
 
         for deal in deals.values():
+            # COMPLETED
+            allow_planned_activity = bool(self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.allow_activity'))
+            param_http_activity = not allow_planned_activity and '&filter[COMPLETED]=YES' or ''
+
             results_batch = b.call_batch({
                 'halt': 0,
                 'cmd': {
                     'contacts': f'crm.deal.contact.items.get?id={deal["id"]}',
-                    'activities_2': f'crm.activity.list?filter[OWNER_ID]={deal["id"]}&filter[OWNER_TYPE_ID]=2&select[]=*&select[]=COMMUNICATIONS',
-                    'activities_3': 'crm.activity.list?filter[OWNER_ID]=$result[contacts][0][CONTACT_ID]&filter[OWNER_TYPE_ID]=3&select[]=*&select[]=COMMUNICATIONS'
+                    'activities_2': f'crm.activity.list?filter[OWNER_ID]={deal["id"]}&filter[OWNER_TYPE_ID]=2{param_http_activity}&select[]=*&select[]=COMMUNICATIONS',
+                    'activities_3': f'crm.activity.list?filter[OWNER_ID]=$result[contacts][0][CONTACT_ID]&filter[OWNER_TYPE_ID]=3{param_http_activity}&select[]=*&select[]=COMMUNICATIONS'
                 }
             })
             #
@@ -524,6 +556,8 @@ class ImportComments(models.Model):
             "select": ["ID", "NAME", "LAST_NAME", "LEAD_ID", "COMPANY_ID", "EMAIL", "PHONE", "TYPE_ID"]
         }
         global contacts
+        global dict_users
+
         if not contacts:
             contacts = self.get_all_bitrix('crm.contact.list', data_contacts)
             # contacts = self.post_from_url(f'{B24_URI}/crm.contact.list', data_contacts)
@@ -555,7 +589,7 @@ class ImportComments(models.Model):
         #     select: ["ID", "TITLE", "CURRENCY_ID", "REVENUE"]
         # },
         # companies = self.post_from_url(f'{B24_URI}/crm.company.list', data_company)
-        companies = None
+        # companies = None
 
         env_deals = self.env['crm.lead'].env
         odoobot_id = self.env['ir.model.data'].sudo().xmlid_to_res_id("base.partner_root")
@@ -570,7 +604,9 @@ class ImportComments(models.Model):
 
             if record:
                 if activity_list:
-                    dict_users = self.get_username_activities()
+                    # dict_users = self.get_username_activities()
+                    if not dict_users:
+                        dict_users = self.get_all_bitrix('user.get', {})
 
                     sorted_date = sorted(list(activity_list.values()),
                                          key=lambda x: (datetime.strptime(str(datetime.fromisoformat(x['CREATED']).replace(tzinfo=None)), '%Y-%m-%d %H:%M:%S')))
@@ -762,9 +798,7 @@ class ImportComments(models.Model):
                             start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
 
                         deal_create_date = datetime.fromisoformat(str(record.create_date)).replace(tzinfo=None)
-
                         create_date = create_date or last_update_date or start_time_date or deal_create_date
-
                         # date_deadline = fields.Datetime.now()+timedelta(days=1)
                         date_today = fields.Date.context_today(self)
 
@@ -840,7 +874,7 @@ class ImportComments(models.Model):
                         # """SELECT * FROM information_schema.columns WHERE table_name = 'mail_activity' """)
                         act_env_id = act_env.res_id
                         act_note = act_env.note
-                        if create_date < last_update_date: create_date = last_update_date
+                        # if create_date < last_update_date: create_date = last_update_date
 
 
                         if activity['COMPLETED'] == 'Y':
@@ -852,16 +886,16 @@ class ImportComments(models.Model):
 
 
     def action_import_activities_comments(self):
-        bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
-        if not bitrix_hook_url:
-            raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
-        global B24_URI
-        B24_URI = bitrix_hook_url
+        # bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
+        # if not bitrix_hook_url:
+        #     raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+        # global B24_URI
+        # B24_URI = bitrix_hook_url
 
         self.action_import_records()
-        print('import_records--------------:) ')
+        # print('import_records--------------:) ')
         self.action_import_activities()
-        print('import_activities============:) ')
+        # print('import_activities============:) ')
 
 
 
