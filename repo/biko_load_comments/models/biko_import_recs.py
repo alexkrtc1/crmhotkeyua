@@ -6,7 +6,7 @@ import requests
 from requests.structures import CaseInsensitiveDict
 from datetime import timedelta
 import csv
-# import yaml
+import yaml
 import os
 import re
 from odoo import tools
@@ -34,23 +34,25 @@ from fast_bitrix24 import Bitrix
         # config = env['ir.config_parameter'].get_param('biko_load_comments.bitr_url', 'url')
 
 hk_logger = logging.getLogger(__name__)
-def get_config_bitrix(param):
-    try:
-        db = sql_db.db_connect(tools.config['db_name'])  # You can get the db name from config
-        cr = db.cursor()
-        # cr.execute("select * from ir_config_parameter where key='biko_load_comments.bitr_url'")
-        cr.execute(f"select * from ir_config_parameter where key='{param}'")
-        data = cr.dictfetchall()[0]['value']
-        cr.commit()
-        cr.close()
-    except Exception as e:
-        hk_logger.error("getting config parameter error encountered: {}".format(e), exc_info=True)
-    return data
+# def get_config_bitrix(param):
+#     try:
+#         db = sql_db.db_connect(tools.config['db_name'])  # You can get the db name from config
+#         cr = db.cursor()
+#         # cr.execute("select * from ir_config_parameter where key='biko_load_comments.bitr_url'")
+#         cr.execute(f"select * from ir_config_parameter where key='{param}'")
+#         data = cr.dictfetchall()[0]['value']
+#         cr.commit()
+#         cr.close()
+#     except Exception as e:
+#         cr.rollback()
+#         cr.close()
+#         hk_logger.error("getting config parameter error encountered: {}".format(e), exc_info=True)
+#     return data
 
 B24_URI = ''
-B24_URI = get_config_bitrix('biko_load_comments.bitr_url')
-b = False
-b = Bitrix(B24_URI)
+# B24_URI = get_config_bitrix('biko_load_comments.bitr_url')
+# b = False
+# b = Bitrix(B24_URI)
 # RESULT_FILE = ''
 # SOURCE_FILE = ''
 # CHARSET = ''
@@ -59,12 +61,15 @@ dict_users = False
 relpath = os.path.dirname(os.path.realpath(__file__))
 
 
-# with open(relpath + '/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
-#     objects = yaml.load(yaml_file, yaml.Loader)
-#     B24_URI = objects['B24_WEBHOOK'] if objects['B24_WEBHOOK'][-1] != '/' else objects['B24_WEBHOOK'][0:-1]
+with open(relpath + '/settings.yaml', 'r', encoding='UTF_8') as yaml_file:
+    objects = yaml.load(yaml_file, yaml.Loader)
+    B24_URI = objects['B24_WEBHOOK'] if objects['B24_WEBHOOK'][-1] != '/' else objects['B24_WEBHOOK'][0:-1]
     # RESULT_FILE = objects['RESULT_FILE']
     # SOURCE_FILE = objects['SOURCE_FILE']
     # CHARSET = objects['CHARSET']
+
+b = False
+b = Bitrix(B24_URI)
 
 headers = CaseInsensitiveDict()
 headers["Content-Type"] = "application/json"
