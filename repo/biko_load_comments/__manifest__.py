@@ -2,8 +2,8 @@
 {
     'name': "BIKO: Import comments to opportunities",
     'version': '14.0.0.1.4',
-    'summary': 'Import comments and activities to opportunities,leads. Last Update 12.02.2023',
-    'description': 'Import comments and activities to opportunities,leads. Last Update 12.02.2023',
+    'summary': 'Import comments and activities to opportunities,leads. Last Update 16.03.2023',
+    'description': 'Import comments and activities to opportunities,leads. Last Update 16.03.2023',
     'author': 'Borovlev AS and Hotkey',
     'company': 'BIKO,HOTKEY',
     "depends": ['base', 'crm'],
