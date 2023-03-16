@@ -59,9 +59,9 @@
                     <button name="action_import_records" attrs="{'invisible':True}" class="btn btn-primary"   type="object"
                             string="Import comments"
                     />
-<!--                    <button name="action_import_activities" attrs="{'invisible':True}" class="btn btn-primary" type="object"-->
-<!--                            string="Import activities"-->
-<!--                    />-->
+                    <button name="action_import_activities" attrs="{'invisible':True}" class="btn btn-primary" type="object"
+                            string="Import activities"
+                    />
                     <!--attrs="{'invisible':True}"-->
                 </header>
             </xpath>

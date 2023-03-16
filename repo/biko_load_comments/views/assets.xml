@@ -4,5 +4,10 @@
         <xpath expr="." position="inside">
             <link rel="stylesheet" type="text/css" href="/biko_load_comments/static/src/css/style.css"/>
         </xpath>
+        <xpath expr="//script[@src='/mail/static/src/models/thread_cache/thread_cache.js']" position="replace">
+            <script src="/biko_load_comments/static/src/js/hk_thread_cache.js" type="text/javascript"/>
+        </xpath>
+        <!--<script type="text/javascript" src="/mail/static/src/components/message_list/message_list.js"></script>-->
+
     </template>
 </odoo>
