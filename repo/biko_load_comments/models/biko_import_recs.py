@@ -453,7 +453,9 @@ class ImportComments(models.Model):
         return res_users
 
     def post_from_url(self, url, param, pheaders=headers):
-        req = requests.post(url, param, headers=pheaders)
+        session = requests.Session()
+
+        req =session.post(url, param, headers=pheaders)
 
         if req.status_code != 200:
             print('Error accessing to B24!')
@@ -508,12 +510,13 @@ class ImportComments(models.Model):
             start_page += start
             param_dict.update({"start": start_page})
             param_str = json.dumps(param_dict, ensure_ascii=False)
-            req = requests.post(url, param_str, headers=pheaders)
+            req = session.post(url, param_str, headers=pheaders)
             resp_json = req.json()
             res.extend(resp_json['result'])
             i += 1
 
-        hk_logger.info("contacts loops%s", i)
+        session.close()
+        hk_logger.info("post_from_url url=%s i=%s", url, i)
         return res
 
     def action_import_records(self, deals):
@@ -885,6 +888,9 @@ class ImportComments(models.Model):
                         summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
                                          activity['SUBJECT'])
                         # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
+                        body_message = '<p><span class ="fa fa-phone fa-fw"> </span> <span> Call </span> done   </p>'
+                        note = f"{body_message}{note}"
+
                     elif (activity['PROVIDER_TYPE_ID'] == "2"):
                         note = ' '
                     elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
