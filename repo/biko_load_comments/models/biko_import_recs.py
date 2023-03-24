@@ -145,7 +145,7 @@ class ImportComments(models.Model):
                         Відповідальна особа
                     </div>
                     <div class="crm-timeline__card-container_info-value">
-                        <a href=# data-oe-model=res.users data-oe-id=1 class="crm-timeline__card_link --bold">
+                        <a href=# data-oe-model=res.users data-oe-id={user_id_tml} class="crm-timeline__card_link --bold">
                          {responsible_user_lastname}</a>
                     </div>
             </div>
@@ -645,10 +645,13 @@ class ImportComments(models.Model):
             # nonlocal activity_list
             nonlocal partner_company_fmt
             nonlocal note
+            nonlocal summary
             nonlocal activity_typ
             nonlocal create_date
             nonlocal user_id
-
+            nonlocal user_id_tml
+            nonlocal responsible_id
+            nonlocal date_deadline
             # if record:
             if activity:
                 # dict_users = self.get_username_activities()
@@ -702,7 +705,16 @@ class ImportComments(models.Model):
                         res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user[
                             'LAST_NAME'] + "</p>"
 
+                    if res_user:
+                        user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
+                        if user_search:
+                            user_id = user_search[0].partner_id.id
+                            user_id_tml = user_search[0].id
+                        else:
+                            user_id = odoobot_id
+                            user_id_tml = odoobot_user_id
                     # <a href=# data-oe-model=account.move data-oe-id={move_id}>{move_name}</a>"
+
                     if ENTITY_TYPE_ID:
                         if (ENTITY_TYPE_ID == 4):
                             COMPANY_ID = ENTITY_ID
@@ -724,14 +736,13 @@ class ImportComments(models.Model):
                             date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
                             company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
                                                                   company_id=company_id)
-                            responsible_user_fmt = self.responsible_user_tml.format(
+                            responsible_user_fmt = self.responsible_user_tml.format(user_id_tml=user_id_tml,
                                 responsible_user_lastname=responsible_user_lastname)
                             partner_company_fmt = self.partner_company_tml.format(
                                 date_deadline_tml=date_deadline_fmt,
                                 communication_name_tml='',
                                 company_tml=company_fmt,
                                 responsible_user_tml=responsible_user_fmt)
-
 
                         elif (ENTITY_TYPE_ID == 3):
                             partner_id = 0
@@ -779,7 +790,7 @@ class ImportComments(models.Model):
                                             COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
                                         company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
                                                                               company_id=company_id)
-                                        responsible_user_fmt = self.responsible_user_tml.format(
+                                        responsible_user_fmt = self.responsible_user_tml.format(user_id_tml=user_id_tml,
                                             responsible_user_lastname=responsible_user_lastname)
                                         partner_company_fmt = self.partner_company_tml.format(
                                             date_deadline_tml=date_deadline_fmt,
@@ -791,7 +802,7 @@ class ImportComments(models.Model):
 
                                 date_deadline_fmt = self.date_deadline_tml.format(
                                     date_deadline_str=date_deadline_str)
-                                responsible_user_fmt = self.responsible_user_tml.format(
+                                responsible_user_fmt = self.responsible_user_tml.format(user_id_tml=user_id_tml,
                                     responsible_user_lastname=responsible_user_lastname)
                                 partner_company_fmt = self.partner_company_tml.format(
                                     date_deadline_tml=date_deadline_fmt,
@@ -806,10 +817,8 @@ class ImportComments(models.Model):
                                 if len(activity['COMMUNICATIONS']) > 1:
                                     if (len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
 
-                                        COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                                  'NAME'] + ' ' + \
-                                                              activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                                  'LAST_NAME'] or ''
+                                        COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['NAME'] + ' ' + \
+                                                              activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['LAST_NAME'] or ''
 
                                         COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
                                             'LAST_NAME']
@@ -836,12 +845,11 @@ class ImportComments(models.Model):
                                 if len(contacts) > 0:
                                     contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
                                                    False)
-                                    contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact[
-                                        'LAST_NAME'] + "</p>"
+                                    contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (contact['LAST_NAME'] or '') + "</p>"
 
                                     if contact:
                                         partner_search = self.env['res.partner'].search(
-                                            [('name', 'like', contact['LAST_NAME']),
+                                            [('name', 'like', (contact['LAST_NAME'] or '')),
                                              ('name', 'like', contact['NAME'])])
                                         if partner_search:
                                             partner_id = partner_search[0].id or 0
@@ -853,7 +861,7 @@ class ImportComments(models.Model):
                                     COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
                                 company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
                                                                       company_id=company_id)
-                                responsible_user_fmt = self.responsible_user_tml.format(
+                                responsible_user_fmt = self.responsible_user_tml.format(user_id_tml=user_id_tml,
                                     responsible_user_lastname=responsible_user_lastname)
                                 partner_company_fmt = self.partner_company_tml.format(
                                     date_deadline_tml=date_deadline_fmt,
@@ -884,33 +892,52 @@ class ImportComments(models.Model):
 
                     note = (activity['DESCRIPTION'] or '') + res_user_last_name + partner_company_fmt
                     summary = activity['SUBJECT']
-                    if (activity['PROVIDER_TYPE_ID'] == "CALL"):
-                        summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
-                                         activity['SUBJECT'])
-                        # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
-                        body_message = '<p><span class ="fa fa-phone fa-fw"> </span> <span> Call </span> done   </p>'
-                        note = f"{body_message}{note}"
 
-                    elif (activity['PROVIDER_TYPE_ID'] == "2"):
-                        note = ' '
-                    elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
-                        note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
+                    if activity['COMPLETED'] == 'Y':
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
+                                             activity['SUBJECT'])
+                            # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
+                            body_message = '<p><span class ="fa fa-phone fa-fw"> </span> <span> Call </span> done   </p>'
+                            note = f"{body_message}{note}"
 
-                    if (activity['PROVIDER_TYPE_ID'] == "CALL"):
-                        activity_typ = 'comment'
-                    elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
-                        activity_typ = 'email'
-                    elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
-                        activity_typ = 'comment'
-                    else:
-                        activity_typ = None
+                        elif (activity['PROVIDER_TYPE_ID'] == "2"):
+                            note = ' '
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
+
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            activity_typ = 'comment'
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            activity_typ = 'email'
+                        elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+                            activity_typ = 'comment'
+                        else:
+                            activity_typ = 'comment'
 
                     # [
                     #     ('email', 'Email'),
                     #     ('comment', 'Comment'),
                     #     ('notification', 'System notification'),
                     #     ('user_notification', 'User Specific Notification')]
+                    if activity['COMPLETED'] == 'N':
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
+                                             activity['SUBJECT'])
+                            # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
+                        elif (activity['PROVIDER_TYPE_ID'] == "2"):
+                            note = ' '
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
 
+                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                            activity_typ = 'mail.mail_activity_data_call'
+                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                            activity_typ = 'mail.mail_activity_data_email'
+                        elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+                            activity_typ = 'mail.mail_activity_data_todo'
+                        else:
+                            activity_typ = None
 
                     phone_file_attachments = []
                     attachment = []
@@ -975,17 +1002,22 @@ class ImportComments(models.Model):
                     author_id = comment['AUTHOR_ID']
                     if len(dict_users) > 0:
                         res_user = next((user for user in dict_users if user['ID'] == author_id), False)
-                        res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user[
-                            'LAST_NAME'] + "</p>"
+                        res_user_last_name = res_user['NAME'] + "&nbsp;" + res_user[
+                            'LAST_NAME']
 
                     if res_user:
                         user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
                         if user_search:
                             user_id = user_search[0].partner_id.id
+                            user_id_tml = user_search[0].id
                         else:
                             user_id = odoobot_id
 
-                    responsible_user_fmt = self.responsible_user_tml.format(
+                    responsible_user_tml = self.responsible_user_tml
+                    responsible_user_tml = re.sub('(?<=<div class=\"crm-timeline__card-container_info-title\">)[\s,\w]*', 'Автор:',
+                                     responsible_user_tml, flags=re.I | re.UNICODE)
+
+                    responsible_user_fmt = responsible_user_tml.format(user_id_tml=user_id_tml,
                         responsible_user_lastname=res_user_last_name)
                     partner_company_fmt = self.partner_company_tml.format(
                         date_deadline_tml='',
@@ -994,11 +1026,6 @@ class ImportComments(models.Model):
                         responsible_user_tml=responsible_user_fmt)
                     note = comment['COMMENT'] + partner_company_fmt
                     ###
-
-
-
-
-
                     # message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment',
                     #                                   attachments=f_attachments)
                     # message_rec['date'] = date_time
@@ -1033,9 +1060,13 @@ class ImportComments(models.Model):
             record = env_deals.ref(external_id)
             partner_company_fmt = ''
             note = ''
+            summary = ''
             activity_typ = ''
             create_date = False
             user_id = False
+            user_id_tml = False
+            responsible_id = False
+            date_deadline = False
 
             if record:
                 record = env_deals.ref(external_id)
@@ -1044,8 +1075,19 @@ class ImportComments(models.Model):
                     # dict_users = self.get_username_activities()
 
                     for comment in sorted_comments_date:
+                        # hk_logger.warning('comment["ID"] = %s', str(comment['ID']))
+                        # if comment['ID']== '68467':
+                        #     hk_logger.info('yes comment["ID"] = %s',  str(comment['ID']))
                         #######################################
-
+                        partner_company_fmt = ''
+                        note = ''
+                        summary = ''
+                        activity_typ = ''
+                        create_date = False
+                        user_id = False
+                        user_id_tml = False
+                        responsible_id = False
+                        date_deadline = False
                         comment_activity_lists(comment)
 
                         ######################################
@@ -1091,231 +1133,242 @@ class ImportComments(models.Model):
 
                     # for activity in activity_list.values():
                     for activity in sorted_date:
-                        date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
-                        date_deadline_str = date_deadline.strftime("%A,%d%b %Y,%H:%M")
-                        create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
-                        last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
-                        # message = locale_date_str + " тел:" + partner_phone + " Только что был пропущен звонок от" + partner_name + "<a href=# data-oe-model=crm.phonecall data-oe-id=%d>#%s - Ссылка на звонок</a>" % (record.id, record.name)
-                        author_id = activity['AUTHOR_ID']
-                        responsible_id = activity['RESPONSIBLE_ID']
-                        ENTITY_TYPE_ID = False
-                        ENTITY_ID = False
                         partner_company_fmt = ''
-                        if 'COMMUNICATIONS' in activity.keys():
-                            if len(activity['COMMUNICATIONS']) > 0:
-                                ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][0]['ENTITY_TYPE_ID'])
-                                ENTITY_ID = activity['COMMUNICATIONS'][0]['ENTITY_ID']
-                                # COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
-                                tel = activity['COMMUNICATIONS'][0]['VALUE']
+                        note = ''
+                        summary = ''
+                        activity_typ = ''
+                        create_date = False
+                        user_id = False
+                        user_id_tml = False
+                        responsible_id = False
+                        date_deadline = False
+                        comment_activity_lists(activity)
 
-                        # partner_company = ''
-
-                        company_id = 0
-
-                        # if COMPANY_TITLE:
-                        #     company_search = self.env['res.partner'].search(
-                        #         [('name', 'like', COMPANY_TITLE)])
-                        #     if company_search:
-                        #         company_id = company_search[0].id or 0
-
-                        if len(dict_users) > 0:
-                            responsible_user = next((user for user in dict_users if user['ID'] == responsible_id),
-                                                    False)
-                            responsible_user_lastname = responsible_user['NAME'] + ' ' + responsible_user['LAST_NAME']
-
-                        if len(dict_users) > 0:
-                            res_user = next((user for user in dict_users if user['ID'] == author_id), False)
-                            res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user[
-                                'LAST_NAME'] + "</p>"
-
-                        # <a href=# data-oe-model=account.move data-oe-id={move_id}>{move_name}</a>"
-                        if ENTITY_TYPE_ID:
-                            if (ENTITY_TYPE_ID == 4):
-                                COMPANY_ID = ENTITY_ID
-                                COMPANY_TITLE = ''
-                                # company_id = 0
-                                if 'COMMUNICATIONS' in activity.keys():
-                                    if len(activity['COMMUNICATIONS']) > 0:
-                                        if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
-                                            COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
-
-                                if COMPANY_TITLE:
-                                    company_search = self.env['res.partner'].search(
-                                        [('name', 'like', COMPANY_TITLE)])
-                                    if company_search:
-                                        company_id = company_search[0].id or 0
-                                        url_company = f'web#id={company_id}&model=res.partner'
-
-                                date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
-                                company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
-                                                                      company_id=company_id)
-                                responsible_user_fmt = self.responsible_user_tml.format(
-                                    responsible_user_lastname=responsible_user_lastname)
-                                partner_company_fmt = self.partner_company_tml.format(date_deadline_tml=date_deadline_fmt,
-                                                                                      communication_name_tml='',
-                                                                                      company_tml=company_fmt,
-                                                                                      responsible_user_tml=responsible_user_fmt)
-
-
-                            elif (ENTITY_TYPE_ID == 3):
-                                partner_id = 0
-                                COMMUNICATIONS_NAME = ''
-                                COMPANY_TITLE = ''
-
-                                if len(contacts) > 0:
-                                    contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID), False)
-                                    contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (
-                                            contact['LAST_NAME'] or '') + "</p>"
-
-                                    if contact:
-                                        partner_search = self.env['res.partner'].search(
-                                            [('name', 'like', (contact['LAST_NAME'] or '')),
-                                             ('name', 'like', contact['NAME'])])
-                                        if partner_search:
-                                            partner_id = partner_search[0].id or 0
-                                            url_partner = f'web#id={partner_id}&model=res.partner'
-
-                                if 'COMMUNICATIONS' in activity.keys():
-                                    if len(activity['COMMUNICATIONS']) > 0:
-                                        if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
-                                            COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['NAME'] + ' ' + \
-                                                                  activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME'] or ''
-
-                                            COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME']
-                                            COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
-                                            COMPANY_ID = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_ID']
-
-                                            if COMPANY_TITLE:
-                                                company_search = self.env['res.partner'].search(
-                                                    [('name', 'like', COMPANY_TITLE)])
-                                                if company_search:
-                                                    company_id = company_search[0].id or 0
-                                                    url_company = f'web#id={company_id}&model=res.partner'
-
-                                            date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
-                                            communication_name_fmt = self.communication_name_tml.format(
-                                                COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
-                                            company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
-                                                                                  company_id=company_id)
-                                            responsible_user_fmt = self.responsible_user_tml.format(
-                                                responsible_user_lastname=responsible_user_lastname)
-                                            partner_company_fmt = self.partner_company_tml.format(
-                                                date_deadline_tml=date_deadline_fmt,
-                                                communication_name_tml=communication_name_fmt,
-                                                company_tml=company_fmt,
-                                                responsible_user_tml=responsible_user_fmt)
-
-                                else:
-
-                                    date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
-                                    responsible_user_fmt = self.responsible_user_tml.format(
-                                        responsible_user_lastname=responsible_user_lastname)
-                                    partner_company_fmt = self.partner_company_tml.format(
-                                        date_deadline_tml=date_deadline_fmt,
-                                        communication_name_tml='',
-                                        company_tml='',
-                                        responsible_user_tml=responsible_user_fmt)
-
-                            else:
-                                COMMUNICATIONS_NAME = ''
-                                COMPANY_TITLE = ''
-                                if 'COMMUNICATIONS' in activity.keys():
-                                    if len(activity['COMMUNICATIONS']) > 1:
-                                        if (len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
-
-                                            COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                                      'NAME'] + ' ' + \
-                                                                  activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                                      'LAST_NAME'] or ''
-
-                                            COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                'LAST_NAME']
-                                            COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                'COMPANY_TITLE']
-                                            COMPANY_ID = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_ID']
-                                            ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][1]['ENTITY_TYPE_ID'])
-                                            ENTITY_ID = activity['COMMUNICATIONS'][1]['ENTITY_ID']
-                                            COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                                'COMPANY_TITLE']
-                                            tel = activity['COMMUNICATIONS'][1]['VALUE']
-                                            partner_company = ''
-                                            company_id = 0
-
-                                            if COMPANY_TITLE:
-                                                company_search = self.env['res.partner'].search(
-                                                    [('name', 'like', COMPANY_TITLE)])
-                                                if company_search:
-                                                    company_id = company_search[0].id or 0
-
-                                    # elif (ENTITY_TYPE_ID == 3):
-                                    partner_id = 0
-
-                                    if len(contacts) > 0:
-                                        contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
-                                                       False)
-                                        contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact[
-                                            'LAST_NAME'] + "</p>"
-
-                                        if contact:
-                                            partner_search = self.env['res.partner'].search(
-                                                [('name', 'like', contact['LAST_NAME']), ('name', 'like', contact['NAME'])])
-                                            if partner_search:
-                                                partner_id = partner_search[0].id or 0
-                                                url_partner = f'web#id={partner_id}&model=res.partner'
-
-                                    date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
-                                    communication_name_fmt = self.communication_name_tml.format(
-                                        COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
-                                    company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
-                                                                          company_id=company_id)
-                                    responsible_user_fmt = self.responsible_user_tml.format(
-                                        responsible_user_lastname=responsible_user_lastname)
-                                    partner_company_fmt = self.partner_company_tml.format(
-                                        date_deadline_tml=date_deadline_fmt,
-                                        communication_name_tml=communication_name_fmt,
-                                        company_tml=company_fmt,
-                                        responsible_user_tml=responsible_user_fmt)
-                                else:
-                                    temp_var = 0
-
-                        if res_user:
-                            user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
-                            if user_search:
-                                user_id = user_search[0].partner_id.id
-                                su_id = user_search[0].id
-                                res_user_last_name = ''
-                            else:
-                                # user_id = self.env.uid
-                                user_id = odoobot_id
-                                su_id = odoobot_user_id
-
-                        if activity['START_TIME']:
-                            start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
-
-                        deal_create_date = datetime.fromisoformat(str(record.create_date)).replace(tzinfo=None)
-                        create_date = create_date or last_update_date or start_time_date or deal_create_date
-                        # date_deadline = fields.Datetime.now()+timedelta(days=1)
-                        date_today = fields.Date.context_today(self)
-
-                        note = (activity['DESCRIPTION'] or '') + res_user_last_name + partner_company_fmt
-                        summary = activity['SUBJECT']
-                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
-                            summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
-                                             activity['SUBJECT'])
-                            # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
-                        elif (activity['PROVIDER_TYPE_ID'] == "2"):
-                            note = ' '
-                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
-                            note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
-
-                        if (activity['PROVIDER_TYPE_ID'] == "CALL"):
-                            activity_typ = 'mail.mail_activity_data_call'
-                        elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
-                            activity_typ = 'mail.mail_activity_data_email'
-                        elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
-                            activity_typ = 'mail.mail_activity_data_todo'
-                        else:
-                            activity_typ = None
+                        # date_deadline = datetime.fromisoformat(activity['DEADLINE']).replace(tzinfo=None)
+                        # date_deadline_str = date_deadline.strftime("%A,%d%b %Y,%H:%M")
+                        # create_date = datetime.fromisoformat(activity['CREATED']).replace(tzinfo=None)
+                        # last_update_date = datetime.fromisoformat(activity['LAST_UPDATED']).replace(tzinfo=None)
+                        # # message = locale_date_str + " тел:" + partner_phone + " Только что был пропущен звонок от" + partner_name + "<a href=# data-oe-model=crm.phonecall data-oe-id=%d>#%s - Ссылка на звонок</a>" % (record.id, record.name)
+                        # author_id = activity['AUTHOR_ID']
+                        # responsible_id = activity['RESPONSIBLE_ID']
+                        # ENTITY_TYPE_ID = False
+                        # ENTITY_ID = False
+                        # partner_company_fmt = ''
+                        # if 'COMMUNICATIONS' in activity.keys():
+                        #     if len(activity['COMMUNICATIONS']) > 0:
+                        #         ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][0]['ENTITY_TYPE_ID'])
+                        #         ENTITY_ID = activity['COMMUNICATIONS'][0]['ENTITY_ID']
+                        #         # COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                        #         tel = activity['COMMUNICATIONS'][0]['VALUE']
+                        #
+                        # # partner_company = ''
+                        #
+                        # company_id = 0
+                        #
+                        # # if COMPANY_TITLE:
+                        # #     company_search = self.env['res.partner'].search(
+                        # #         [('name', 'like', COMPANY_TITLE)])
+                        # #     if company_search:
+                        # #         company_id = company_search[0].id or 0
+                        #
+                        # if len(dict_users) > 0:
+                        #     responsible_user = next((user for user in dict_users if user['ID'] == responsible_id),
+                        #                             False)
+                        #     responsible_user_lastname = responsible_user['NAME'] + ' ' + responsible_user['LAST_NAME']
+                        #
+                        # if len(dict_users) > 0:
+                        #     res_user = next((user for user in dict_users if user['ID'] == author_id), False)
+                        #     res_user_last_name = "<p>Автор:" + res_user['NAME'] + "&nbsp;" + res_user[
+                        #         'LAST_NAME'] + "</p>"
+                        #
+                        # # <a href=# data-oe-model=account.move data-oe-id={move_id}>{move_name}</a>"
+                        # if ENTITY_TYPE_ID:
+                        #     if (ENTITY_TYPE_ID == 4):
+                        #         COMPANY_ID = ENTITY_ID
+                        #         COMPANY_TITLE = ''
+                        #         # company_id = 0
+                        #         if 'COMMUNICATIONS' in activity.keys():
+                        #             if len(activity['COMMUNICATIONS']) > 0:
+                        #                 if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
+                        #                     COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                        #
+                        #         if COMPANY_TITLE:
+                        #             company_search = self.env['res.partner'].search(
+                        #                 [('name', 'like', COMPANY_TITLE)])
+                        #             if company_search:
+                        #                 company_id = company_search[0].id or 0
+                        #                 url_company = f'web#id={company_id}&model=res.partner'
+                        #
+                        #         date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                        #         company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                        #                                               company_id=company_id)
+                        #         responsible_user_fmt = self.responsible_user_tml.format(
+                        #             responsible_user_lastname=responsible_user_lastname)
+                        #         partner_company_fmt = self.partner_company_tml.format(date_deadline_tml=date_deadline_fmt,
+                        #                                                               communication_name_tml='',
+                        #                                                               company_tml=company_fmt,
+                        #                                                               responsible_user_tml=responsible_user_fmt)
+                        #
+                        #
+                        #     elif (ENTITY_TYPE_ID == 3):
+                        #         partner_id = 0
+                        #         COMMUNICATIONS_NAME = ''
+                        #         COMPANY_TITLE = ''
+                        #
+                        #         if len(contacts) > 0:
+                        #             contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID), False)
+                        #             contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (
+                        #                     contact['LAST_NAME'] or '') + "</p>"
+                        #
+                        #             if contact:
+                        #                 partner_search = self.env['res.partner'].search(
+                        #                     [('name', 'like', (contact['LAST_NAME'] or '')),
+                        #                      ('name', 'like', contact['NAME'])])
+                        #                 if partner_search:
+                        #                     partner_id = partner_search[0].id or 0
+                        #                     url_partner = f'web#id={partner_id}&model=res.partner'
+                        #
+                        #         if 'COMMUNICATIONS' in activity.keys():
+                        #             if len(activity['COMMUNICATIONS']) > 0:
+                        #                 if (len(activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']) > 0):
+                        #                     COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['NAME'] + ' ' + \
+                        #                                           activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME'] or ''
+                        #
+                        #                     COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['LAST_NAME']
+                        #                     COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_TITLE']
+                        #                     COMPANY_ID = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_ID']
+                        #
+                        #                     if COMPANY_TITLE:
+                        #                         company_search = self.env['res.partner'].search(
+                        #                             [('name', 'like', COMPANY_TITLE)])
+                        #                         if company_search:
+                        #                             company_id = company_search[0].id or 0
+                        #                             url_company = f'web#id={company_id}&model=res.partner'
+                        #
+                        #                     date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                        #                     communication_name_fmt = self.communication_name_tml.format(
+                        #                         COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
+                        #                     company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                        #                                                           company_id=company_id)
+                        #                     responsible_user_fmt = self.responsible_user_tml.format(
+                        #                         responsible_user_lastname=responsible_user_lastname)
+                        #                     partner_company_fmt = self.partner_company_tml.format(
+                        #                         date_deadline_tml=date_deadline_fmt,
+                        #                         communication_name_tml=communication_name_fmt,
+                        #                         company_tml=company_fmt,
+                        #                         responsible_user_tml=responsible_user_fmt)
+                        #
+                        #         else:
+                        #
+                        #             date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                        #             responsible_user_fmt = self.responsible_user_tml.format(
+                        #                 responsible_user_lastname=responsible_user_lastname)
+                        #             partner_company_fmt = self.partner_company_tml.format(
+                        #                 date_deadline_tml=date_deadline_fmt,
+                        #                 communication_name_tml='',
+                        #                 company_tml='',
+                        #                 responsible_user_tml=responsible_user_fmt)
+                        #
+                        #     else:
+                        #         COMMUNICATIONS_NAME = ''
+                        #         COMPANY_TITLE = ''
+                        #         if 'COMMUNICATIONS' in activity.keys():
+                        #             if len(activity['COMMUNICATIONS']) > 1:
+                        #                 if (len(activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']) > 0):
+                        #
+                        #                     COMMUNICATIONS_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                        #                                               'NAME'] + ' ' + \
+                        #                                           activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                        #                                               'LAST_NAME'] or ''
+                        #
+                        #                     COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                        #                         'LAST_NAME']
+                        #                     COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                        #                         'COMPANY_TITLE']
+                        #                     COMPANY_ID = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_ID']
+                        #                     ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][1]['ENTITY_TYPE_ID'])
+                        #                     ENTITY_ID = activity['COMMUNICATIONS'][1]['ENTITY_ID']
+                        #                     COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
+                        #                         'COMPANY_TITLE']
+                        #                     tel = activity['COMMUNICATIONS'][1]['VALUE']
+                        #                     partner_company = ''
+                        #                     company_id = 0
+                        #
+                        #                     if COMPANY_TITLE:
+                        #                         company_search = self.env['res.partner'].search(
+                        #                             [('name', 'like', COMPANY_TITLE)])
+                        #                         if company_search:
+                        #                             company_id = company_search[0].id or 0
+                        #
+                        #             # elif (ENTITY_TYPE_ID == 3):
+                        #             partner_id = 0
+                        #
+                        #             if len(contacts) > 0:
+                        #                 contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
+                        #                                False)
+                        #                 contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + contact[
+                        #                     'LAST_NAME'] + "</p>"
+                        #
+                        #                 if contact:
+                        #                     partner_search = self.env['res.partner'].search(
+                        #                         [('name', 'like', contact['LAST_NAME']), ('name', 'like', contact['NAME'])])
+                        #                     if partner_search:
+                        #                         partner_id = partner_search[0].id or 0
+                        #                         url_partner = f'web#id={partner_id}&model=res.partner'
+                        #
+                        #             date_deadline_fmt = self.date_deadline_tml.format(date_deadline_str=date_deadline_str)
+                        #             communication_name_fmt = self.communication_name_tml.format(
+                        #                 COMMUNICATIONS_NAME=COMMUNICATIONS_NAME, partner_id=partner_id, tel=tel)
+                        #             company_fmt = self.company_tml.format(COMPANY_TITLE=COMPANY_TITLE, tel=tel,
+                        #                                                   company_id=company_id)
+                        #             responsible_user_fmt = self.responsible_user_tml.format(
+                        #                 responsible_user_lastname=responsible_user_lastname)
+                        #             partner_company_fmt = self.partner_company_tml.format(
+                        #                 date_deadline_tml=date_deadline_fmt,
+                        #                 communication_name_tml=communication_name_fmt,
+                        #                 company_tml=company_fmt,
+                        #                 responsible_user_tml=responsible_user_fmt)
+                        #         else:
+                        #             temp_var = 0
+                        #
+                        # if res_user:
+                        #     user_search = self.env['res.users'].search([('name', 'like', res_user['LAST_NAME'])])
+                        #     if user_search:
+                        #         user_id = user_search[0].partner_id.id
+                        #         su_id = user_search[0].id
+                        #         res_user_last_name = ''
+                        #     else:
+                        #         # user_id = self.env.uid
+                        #         user_id = odoobot_id
+                        #         su_id = odoobot_user_id
+                        #
+                        # if activity['START_TIME']:
+                        #     start_time_date = datetime.fromisoformat(activity['START_TIME']).replace(tzinfo=None)
+                        #
+                        # deal_create_date = datetime.fromisoformat(str(record.create_date)).replace(tzinfo=None)
+                        # create_date = create_date or last_update_date or start_time_date or deal_create_date
+                        # # date_deadline = fields.Datetime.now()+timedelta(days=1)
+                        # date_today = fields.Date.context_today(self)
+                        #
+                        # note = (activity['DESCRIPTION'] or '') + res_user_last_name + partner_company_fmt
+                        # summary = activity['SUBJECT']
+                        # if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                        #     summary = re.sub('(на.+(\d+\s\d+))|(на.+\d+)|(від.+(\d+\s\d+))', ' дзвінок',
+                        #                      activity['SUBJECT'])
+                        #     # note = re.sub('(Вихідний на.+(\d+\s\d+))|(на.+\d+)|(Вхідний від.+(\d+\s\d+))','',note)
+                        # elif (activity['PROVIDER_TYPE_ID'] == "2"):
+                        #     note = ' '
+                        # elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                        #     note = re.sub('(Наші інфопартнери.+>)|(<img.+>)|(З повагою.*)(.*\n)*(.*)*', '', note)
+                        #
+                        # if (activity['PROVIDER_TYPE_ID'] == "CALL"):
+                        #     activity_typ = 'mail.mail_activity_data_call'
+                        # elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
+                        #     activity_typ = 'mail.mail_activity_data_email'
+                        # elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+                        #     activity_typ = 'mail.mail_activity_data_todo'
+                        # else:
+                        #     activity_typ = None
 
                         phone_file_attachments = []
                         attachment = []
@@ -1351,7 +1404,7 @@ class ImportComments(models.Model):
                         #         })
                         #         attachment.append(attachment_obj.id)
 
-                        act_env = record.activity_schedule(activity_typ, user_id=su_id, date_deadline=date_deadline,
+                        act_env = record.activity_schedule(activity_typ, user_id=user_id_tml, date_deadline=date_deadline,
                                                            summary=summary, note=note)
                         act_env['create_date'] = create_date
                         act_env['create_uid'] = responsible_id
