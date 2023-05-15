@@ -50,11 +50,11 @@ class ImportComments(models.Model):
     date_deadline_tml = '''
             <div class ="crm-timeline__card-container_info --inline" >
                 <div class ="crm-timeline__card-container_info-title" > Крайній термін </div>
-                    <div class ="crm-timeline__card-container_info-value"> 
-                        <span class ="crm-timeline__date-pill --color-default --readonly" > 
+                    <div class ="crm-timeline__card-container_info-value">
+                        <span class ="crm-timeline__date-pill --color-default --readonly" >
                             <span> {date_deadline_str} </span>
-                            <span class ="crm-timeline__date-pill_caret" > </span> 
-                        </span> 
+                            <span class ="crm-timeline__date-pill_caret" > </span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -637,8 +637,8 @@ class ImportComments(models.Model):
                             if len(contacts) > 0:
                                 contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
                                                False)
-                                contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (
-                                        contact['LAST_NAME'] or '') + "</p>"
+                                # contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (
+                                #         contact['LAST_NAME'] or '') + "</p>"
 
                                 if contact:
                                     partner_search = self.env['res.partner'].search(
@@ -658,9 +658,11 @@ class ImportComments(models.Model):
 
                                         COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS'][
                                             'LAST_NAME']
-                                        COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS'][
+                                        if 'COMPANY_TITLE' in activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS'].keys():
+                                            COMPANY_TITLE = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS'][
                                             'COMPANY_TITLE']
-                                        COMPANY_ID = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_ID']
+                                        if 'COMPANY_ID' in activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS'].keys():
+                                            COMPANY_ID = activity['COMMUNICATIONS'][0]['ENTITY_SETTINGS']['COMPANY_ID']
 
                                         if COMPANY_TITLE:
                                             company_search = self.env['res.partner'].search(
@@ -707,13 +709,17 @@ class ImportComments(models.Model):
 
                                         COMMUNICATIONS_LAST_NAME = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
                                             'LAST_NAME']
-                                        COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                            'COMPANY_TITLE']
-                                        COMPANY_ID = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_ID']
+
+
+                                        if 'COMPANY_TITLE' in activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'].keys():
+                                            COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_TITLE']
+
+                                        if 'COMPANY_ID' in activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'].keys():
+                                            COMPANY_ID = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS']['COMPANY_ID']
+
                                         ENTITY_TYPE_ID = int(activity['COMMUNICATIONS'][1]['ENTITY_TYPE_ID'])
                                         ENTITY_ID = activity['COMMUNICATIONS'][1]['ENTITY_ID']
-                                        COMPANY_TITLE = activity['COMMUNICATIONS'][1]['ENTITY_SETTINGS'][
-                                            'COMPANY_TITLE']
+
                                         tel = activity['COMMUNICATIONS'][1]['VALUE']
                                         partner_company = ''
                                         company_id = 0
@@ -730,7 +736,7 @@ class ImportComments(models.Model):
                                 if len(contacts) > 0:
                                     contact = next((contact for contact in contacts if contact['ID'] == ENTITY_ID),
                                                    False)
-                                    contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (contact['LAST_NAME'] or '') + "</p>"
+                                    # contact_name = "<p>Автор:" + contact['NAME'] + "&nbsp;" + (contact['LAST_NAME'] or '') + "</p>"
 
                                     if contact:
                                         partner_search = self.env['res.partner'].search(
@@ -776,7 +782,10 @@ class ImportComments(models.Model):
                     date_today = fields.Date.context_today(self)
 
                     note = (activity['DESCRIPTION'] or '') + res_user_last_name + partner_company_fmt
+                    note1 = re.sub(r'\[', '<', note)
+                    note = re.sub(r'\]', '>', note1)
                     summary = activity['SUBJECT']
+
 
                     if activity['COMPLETED'] == 'Y':
                         if (activity['PROVIDER_TYPE_ID'] == "CALL"):
@@ -796,6 +805,12 @@ class ImportComments(models.Model):
                         elif (activity['PROVIDER_TYPE_ID'] == "EMAIL"):
                             activity_typ = 'email'
                         elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
+                            body_message = '<p><span class ="fa fa-tasks fa-fw"></span> <span> To Do </span>done<span>:</span></p>'
+                            note = f"{body_message}{note}"
+                            activity_typ = 'comment'
+                        elif (activity['PROVIDER_TYPE_ID'] == "MEETING"):
+                            body_message = '<p><span class ="fa fa-users fa-fw"></span><span> Meeting </span>done<span>:</span></p>'
+                            note = f"{body_message}{note}"
                             activity_typ = 'comment'
                         else:
                             activity_typ = 'comment'
@@ -821,6 +836,8 @@ class ImportComments(models.Model):
                             activity_typ = 'mail.mail_activity_data_email'
                         elif (activity['PROVIDER_TYPE_ID'] == "TASK"):
                             activity_typ = 'mail.mail_activity_data_todo'
+                        elif (activity['PROVIDER_TYPE_ID'] == "MEETING"):
+                            activity_typ = 'mail_activity_data_meeting'
                         else:
                             activity_typ = None
 
@@ -909,7 +926,13 @@ class ImportComments(models.Model):
                         communication_name_tml='',
                         company_tml='',
                         responsible_user_tml=responsible_user_fmt)
-                    note = comment['COMMENT'] + partner_company_fmt
+                    note = comment['COMMENT']
+                    note1 = re.sub(r'\[', '<', note)
+                    note = re.sub(r'\]', '>', note1)
+                    note += partner_company_fmt
+                    body_message = '<p><span class ="fa fa-commenting" style="color: #2fc6f6;"></span> <span> Comment </span><span>:</span></p>'
+                    # <i class ="fa-regular fa-message-captions" style="color: #274c8b;"> </i>
+                    note = f"{body_message}{note}"
                     ###
                     # message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment',
                     #                                   attachments=f_attachments)
@@ -932,7 +955,7 @@ class ImportComments(models.Model):
         # message_rec = record.message_post(body=msg, author_id=user_id, message_type='comment',
         #                                   attachments=f_attachments)
         # message_rec['date'] = date_time
-        ##########
+        ########## json.dumps(comments_list,ensure_ascii=False)
         for deal in deals_res.values():
             activity_list = deal['activities']
             comments_list = deal['comments']
@@ -960,6 +983,8 @@ class ImportComments(models.Model):
                     # dict_users = self.get_username_activities()
 
                     for comment in sorted_comments_date:
+                        # if comment["ID"]=='170414':
+                        #     hk_logger.warning('comment["ID"] = %s', str(comment['ID']))
                         # hk_logger.warning('comment["ID"] = %s', str(comment['ID']))
                         # if comment['ID']== '68467':
                         #     hk_logger.info('yes comment["ID"] = %s',  str(comment['ID']))
@@ -974,6 +999,8 @@ class ImportComments(models.Model):
                         responsible_id = False
                         date_deadline = False
                         comment_activity_lists(comment)
+
+                        note = '<div>'+summary+'</div>'+note
 
                         ######################################
                         # date_time = datetime.fromisoformat(comment['CREATED']).replace(tzinfo=None)
@@ -1085,7 +1112,7 @@ class ImportComments(models.Model):
     def action_import_activities_comments(self):
         bitrix_hook_url = self.env['ir.config_parameter'].sudo().get_param('biko_load_comments.bitr_url')
         if not bitrix_hook_url:
-            raise UserError(_("Module requires parameter in Settings '%s' ", 'Bitrix Webhook Url'))
+            raise UserError(_("Module requires parameter in Settings '%s' ", 'biko_load_comments.bitr_url'))
         global B24_URI
         B24_URI = bitrix_hook_url
 
